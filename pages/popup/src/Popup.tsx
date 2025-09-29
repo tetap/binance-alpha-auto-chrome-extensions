@@ -107,6 +107,9 @@ const Popup = () => {
 
         appendLog(`设置下单价格: ${lastPrice}`, 'info');
 
+        // 校验是否大瀑布
+        await checkWaterfall(tab);
+
         // 设置价格
         await setPrice(tab, lastPrice);
 
