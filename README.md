@@ -1,5 +1,3 @@
-<div align="center">
-
 <picture>
     <img alt="Logo" src="./docs/app.png" />
 </picture>
