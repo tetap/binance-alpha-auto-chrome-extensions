@@ -4,9 +4,9 @@
     <img alt="Logo" src="./docs/app.png" />
 </picture>
 
-## 邀请ID GRO_20338_X9GMF
+## 🚀 邀请ID GRO_20338_X9GMF
 
-## 邀请链接 [点击直达](https://www.maxweb.black/referral/earn-together/refer-in-hotsummer/claim?hl=zh-CN&ref=GRO_20338_X9GMF&utm_source=default)
+## 🚀 邀请链接 [点击直达](https://www.maxweb.black/referral/earn-together/refer-in-hotsummer/claim?hl=zh-CN&ref=GRO_20338_X9GMF&utm_source=default)
 
 - 自动
 - [Vite Plugin](https://vitejs.dev/guide/api-plugin.html)
