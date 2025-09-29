@@ -89,16 +89,16 @@ export const setAmount = async (tab: chrome.tabs.Tab, amount: number) => {
     args: [amount],
     func: amount => {
       try {
-        const limitTotal = document.querySelector('input#limitTotal') as any;
-        if (!limitTotal) throw new Error('limitTotal元素不存在, 请确认页面是否正确');
-        const lastValue = limitTotal.value;
-        limitTotal.value = amount;
-        const tracker1 = limitTotal._valueTracker;
+        const limitAmount = document.querySelector('input#limitAmount') as any;
+        if (!limitAmount) throw new Error('limitAmount元素不存在, 请确认页面是否正确');
+        const lastValue = limitAmount.value;
+        limitAmount.value = amount;
+        const tracker1 = limitAmount._valueTracker;
         if (tracker1) {
           tracker1.setValue(lastValue);
         }
-        limitTotal.dispatchEvent(new Event('input', { bubbles: true }));
-        limitTotal.dispatchEvent(new Event('change', { bubbles: true }));
+        limitAmount.dispatchEvent(new Event('input', { bubbles: true }));
+        limitAmount.dispatchEvent(new Event('change', { bubbles: true }));
         return { error: '' };
       } catch (err) {
         return { error: String(err) };
@@ -239,6 +239,7 @@ export const checkOrder = async (tab: chrome.tabs.Tab) => {
     target: { tabId: tab.id! },
     func: async () => {
       try {
+        await new Promise(resolve => setTimeout(resolve, 1500));
         const order = document.querySelector('div[id="bn-tab-orderOrder"]') as HTMLButtonElement;
         if (!order) throw new Error('订单元素不存在, 请确认页面是否正确');
         const limit = document.querySelector('div[id="bn-tab-limit"]') as HTMLButtonElement;
@@ -268,6 +269,7 @@ export const checkOrder = async (tab: chrome.tabs.Tab) => {
           if (svg) {
             svg.dispatchEvent(evt);
           }
+          throw new Error('买入订单超时，请检查页面是否正确');
         }
         // TODO：如果是卖出订单 赶紧操作补救重新出售
         // const sell = document.querySelector('td div[style="color: var(--color-Sell);"]');
@@ -308,10 +310,21 @@ export const checkWaterfall = async (tab: chrome.tabs.Tab) => {
             ?.querySelectorAll('& > div') ?? [],
         ) as HTMLDivElement[];
         // 取出前面8条数据，如果存在3条以上红色价格连续则抛出异常
-        const slicing = elem.slice(0, 5);
-        const sells = slicing.filter(e => e.querySelector('div[style="color: var(--color-Sell);"]'));
-        if (sells.length >= 3) {
-          throw new Error('价格波动较大，放弃操作');
+        const slicing = elem.slice(0, 8);
+        const sells = slicing.filter(e => e.querySelector('div[style="color: var(--color-Sell);"]')).slice(0, 3);
+        if (sells.length < 3) {
+          return { error: '' };
+        }
+        // flex-1 cursor-pointer 获取价格 如果全部一致则不算波动
+        const prices = sells
+          .map(e => {
+            const priceEl = e.querySelector('.flex-1.cursor-pointer');
+            return priceEl?.textContent?.trim();
+          })
+          .filter(Boolean);
+        const allSame = prices.every(p => p === prices[0]);
+        if (!allSame) {
+          throw new Error('价格波动异常，请检查页面是否正确');
         }
         return { error: '' };
       } catch (err) {

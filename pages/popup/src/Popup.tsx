@@ -57,7 +57,7 @@ const Popup = () => {
     }
     setRuning(true);
     const runNum = data.runNum ? Number(data.runNum) : 1;
-
+    let errorCount = 0;
     for (let i = 0; i < runNum; i++) {
       try {
         appendLog(`当前轮次: ${i + 1}`, 'info');
@@ -68,7 +68,9 @@ const Popup = () => {
 
         if (!balance) return console.error('获取余额失败');
 
-        setStartBalance(balance);
+        if (!startBalance) {
+          setStartBalance(balance);
+        }
 
         setCurrentBalance(balance);
         // 设置操作金额
@@ -156,14 +158,24 @@ const Popup = () => {
         setCurrentBalance(lastBalance);
 
         appendLog(`下单成功: ${data.amount}(USDT) 下单价格: ${lastPrice} 反向价格: ${truncated}`, 'success');
+
+        errorCount = 0;
       } catch (error: unknown) {
         if (error instanceof Error) {
-          appendLog(error.message, 'info');
+          appendLog(error.message, 'error');
         }
         console.error(error);
-        // 刷新页面
-        const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
-        if (tab.id) chrome.tabs.reload(tab.id);
+        if (errorCount > 10) {
+          // 刷新页面
+          const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+          if (tab.id) chrome.tabs.reload(tab.id);
+          appendLog(`错误防抖刷新页面等待6s`, 'info');
+          await new Promise(resolve => setTimeout(resolve, 6000));
+
+          errorCount = 0;
+        }
+        errorCount++;
+        i--;
       }
 
       appendLog(`当前轮次结束，等待1s 继续`, 'info');
