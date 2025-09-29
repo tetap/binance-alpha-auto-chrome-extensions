@@ -37,7 +37,7 @@ jobs:
       - name: Upload Artifact ⬆️
         uses: actions/upload-artifact@v4
         with:
-          path: ./dist/extension.zip
+          path: extension.zip
           name: extension.zip
           overwrite: true
 
@@ -45,4 +45,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: dist/extension.zip
+          files: extension.zip
