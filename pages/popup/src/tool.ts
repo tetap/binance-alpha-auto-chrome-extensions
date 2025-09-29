@@ -234,10 +234,11 @@ export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) => {
 };
 
 // 设置订单
-export const checkOrder = async (tab: chrome.tabs.Tab) => {
+export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
-    func: async () => {
+    args: [timeout],
+    func: async timeout => {
       try {
         await new Promise(resolve => setTimeout(resolve, 1500));
         const order = document.querySelector('div[id="bn-tab-orderOrder"]') as HTMLButtonElement;
@@ -251,8 +252,8 @@ export const checkOrder = async (tab: chrome.tabs.Tab) => {
           if (!buy && !sell) break;
           await new Promise(resolve => setTimeout(resolve, 1000 / 30));
           count++;
-          // 大约 3 s 后超时
-          if (count > 99) {
+          // 大约 33 * timeout = timeout s 后超时
+          if (count > 33 * timeout) {
             console.error('订单超时，请检查页面是否正确');
             break;
           }

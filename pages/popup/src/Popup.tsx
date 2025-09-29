@@ -37,9 +37,10 @@ const Popup = () => {
       dot: string;
       type: 'Buy' | 'Sell';
       runNum: string;
+      timeout: string;
     };
 
-    if (!data.amount || !data.count || !data.dot || !data.type || !data.runNum) {
+    if (!data.amount || !data.count || !data.dot || !data.type || !data.runNum || !data.timeout) {
       appendLog('参数不能为空', 'error');
       setRuning(false);
       return;
@@ -49,7 +50,8 @@ const Popup = () => {
       isNaN(Number(data.amount)) ||
       isNaN(Number(data.count)) ||
       isNaN(Number(data.dot)) ||
-      isNaN(Number(data.runNum))
+      isNaN(Number(data.runNum)) ||
+      isNaN(Number(data.timeout))
     ) {
       appendLog('参数必须为数字', 'error');
       setRuning(false);
@@ -141,7 +143,7 @@ const Popup = () => {
         appendLog(`操作买入确认`, 'info');
 
         // 监听订单是否已完成
-        await checkOrder(tab);
+        await checkOrder(tab, Number(data.timeout));
 
         appendLog(`等待订单完成`, 'info');
 
@@ -265,6 +267,11 @@ const Popup = () => {
             placeholder={`下单金额(每次操作金额(USDT))`}
             defaultValue={''}
           />
+        </div>
+
+        <div className="mt-4 grid w-full max-w-sm items-center gap-3">
+          <Label htmlFor="timeout">挂单超时(秒)</Label>
+          <Input type="text" name="timeout" id="timeout" placeholder={`挂单超时`} defaultValue={'3'} />
         </div>
 
         <div className="mt-4">
