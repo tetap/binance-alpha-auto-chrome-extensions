@@ -89,16 +89,16 @@ export const setAmount = async (tab: chrome.tabs.Tab, amount: number) => {
     args: [amount],
     func: amount => {
       try {
-        const limitAmount = document.querySelector('input#limitAmount') as any;
-        if (!limitAmount) throw new Error('limitAmount元素不存在, 请确认页面是否正确');
-        const lastValue = limitAmount.value;
-        limitAmount.value = amount;
-        const tracker1 = limitAmount._valueTracker;
+        const limitTotal = document.querySelector('input#limitTotal') as any;
+        if (!limitTotal) throw new Error('limitTotal元素不存在, 请确认页面是否正确');
+        const lastValue = limitTotal.value;
+        limitTotal.value = amount;
+        const tracker1 = limitTotal._valueTracker;
         if (tracker1) {
           tracker1.setValue(lastValue);
         }
-        limitAmount.dispatchEvent(new Event('input', { bubbles: true }));
-        limitAmount.dispatchEvent(new Event('change', { bubbles: true }));
+        limitTotal.dispatchEvent(new Event('input', { bubbles: true }));
+        limitTotal.dispatchEvent(new Event('change', { bubbles: true }));
         return { error: '' };
       } catch (err) {
         return { error: String(err) };
