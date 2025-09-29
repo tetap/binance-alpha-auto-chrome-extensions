@@ -87,3 +87,23 @@ pnpm build
 <picture>
     <img alt="Logo" src="./docs/end.png" />
 </picture>
+
+
+## 模式介绍
+
+### 买入价模式 
+
+适用于快速刷流水，适用于稳定币，稳定的情况下可快速出入，达到快速刷取流水目的
+
+<picture>
+    <img alt="Logo" src="./docs/buy.png" />
+</picture>
+
+
+### 卖出价模式
+
+在波动性比较大的币中推荐使用，避免极端情况发生。 偶尔还有意想不到的回报，效率较低。
+
+<picture>
+    <img alt="Logo" src="./docs/sell.png" />
+</picture>
