@@ -14,7 +14,7 @@ import {
 import { useLogger } from './useLogger';
 import { withErrorBoundary, withSuspense } from '@extension/shared';
 import { Button, cn, ErrorDisplay, Input, Label, LoadingSpinner, RadioGroup, RadioGroupItem } from '@extension/ui';
-import { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 
 const Popup = () => {
   const [runing, setRuning] = useState(false);
@@ -189,6 +189,9 @@ const Popup = () => {
     setRuning(false);
   };
 
+  // 流水
+  const op = useMemo(() => Number(currentBalance) - Number(startBalance), [currentBalance, startBalance]);
+
   useLayoutEffect(() => {
     (async (setStartBalance, setCurrentBalance, appendLog) => {
       try {
@@ -290,7 +293,7 @@ const Popup = () => {
         {render}
 
         <div className="flex flex-none items-center justify-end text-xs">
-          操作损耗:<b className="text-destructive ml-2 text-sm"> {Number(currentBalance) - Number(startBalance)}</b>
+          操作损耗:<b className={cn('ml-2 text-sm', op > 0 ? 'text-green-500' : 'text-red-500')}> {op}</b>
         </div>
       </div>
     </div>
