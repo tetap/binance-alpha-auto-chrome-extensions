@@ -3,9 +3,9 @@
       <img alt="Logo" src="./docs/app.png" />
   </picture>
 
-## 🚀 邀请ID GRO_20338_X9GMF
-
+## 🚀 邀请链接 [点击直达](https://accounts.maxweb.black/register?ref=TETAP)
 ## 🚀 邀请链接 [点击直达](https://www.maxweb.black/referral/earn-together/refer-in-hotsummer/claim?hl=zh-CN&ref=GRO_20338_X9GMF&utm_source=default)
+## 🚀 邀请链接 [点击直达](https://www.maxweb.black/activity/referral-entry/CPA?ref=CPA_00XHV1H7W5)
 
 ## 项目介绍
 
