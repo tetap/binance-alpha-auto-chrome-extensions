@@ -1,5 +1,5 @@
 {
-  "name": "chrome-extension-boilerplate-react-vite",
+  "name": "binance-alpha-auto-chrome-extensions",
   "version": "0.5.0",
   "description": "币安 Alpha 小助手",
   "license": "MIT",
@@ -7,7 +7,7 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "https://github.com/Jonghakseo/chrome-extension-boilerplate-react-vite.git"
+    "url": "https://github.com/tetap/binance-alpha-auto-chrome-extensions"
   },
   "type": "module",
   "scripts": {
