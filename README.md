@@ -1,6 +1,7 @@
-<picture>
-    <img alt="Logo" src="./docs/app.png" />
-</picture>
+<div align="center">
+  <picture>
+      <img alt="Logo" src="./docs/app.png" />
+  </picture>
 
 ## 🚀 邀请ID GRO_20338_X9GMF
 
@@ -10,6 +11,7 @@
 
 一个基于 Chrome 扩展的 Binance Alpha 流水刷取工具，专为刷交易流水和获取空投积分设计。通过模拟交易操作和监控价格，自动生成流水数据，同时记录操作日志，帮助用户快速积累积分。
 
+</div>
 
 ## 功能特点
 
