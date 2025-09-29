@@ -251,7 +251,7 @@ export const checkOrder = async (tab: chrome.tabs.Tab) => {
           if (!buy && !sell) break;
           await new Promise(resolve => setTimeout(resolve, 1000 / 30));
           count++;
-          // 大约 30 s 后超时
+          // 大约 3 s 后超时
           if (count > 99) {
             console.error('订单超时，请检查页面是否正确');
             break;
