@@ -2,8 +2,6 @@ name: Build And Upload Extension Zip
 
 permissions:
   contents: write   # ✅ 允许创建 release / 上传文件
-  packages: read
-  metadata: read
 
 # 只在 push tag 时触发
 on:
