@@ -1,19 +1,62 @@
-name: Build And Upload Extension Zip Via Artifact
+name: Build, Tag and Upload Extension Zip
 
-on: [ pull_request_target ]
+on:
+  push:
+    branches:
+      - main    # 只在 main 分支 push 时触发
+  workflow_dispatch:  # 可手动触发
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
+      # 1. 检出代码
       - uses: actions/checkout@v4
+
+      # 2. 安装 pnpm
       - uses: pnpm/action-setup@v4
+
+      # 3. 安装 Node.js
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: pnpm
+
+      # 4. 安装依赖
       - run: pnpm install --frozen-lockfile --prefer-offline
+
+      # 5. 构建扩展
       - run: pnpm build
+
+      # 6. 压缩 build 或 dist 文件夹
+      - run: |
+          zip -r extension.zip dist/*
+
+      # 7. 上传 artifact
       - uses: actions/upload-artifact@v4
         with:
-          path: dist/*
+          name: extension-zip
+          path: extension.zip
+
+      # 8. 自动生成 tag（根据日期+commit hash）
+      - name: Generate Tag
+        id: tag
+        run: |
+          TAG_NAME="v$(date +'%Y%m%d%H%M%S')"
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag $TAG_NAME
+          git push origin $TAG_NAME
+
+      # 9. 可选：创建 GitHub Release 并上传 zip
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          name: Release ${{ env.TAG_NAME }}
+          body: "自动构建并打 tag 发布"
+          files: extension.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
