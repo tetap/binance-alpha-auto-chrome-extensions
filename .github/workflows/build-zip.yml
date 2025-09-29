@@ -1,10 +1,11 @@
-name: Build, Tag and Upload Extension Zip
+name: Build And Upload Extension Zip
 
+# 只在 push tag 时触发
 on:
   push:
-    branches:
-      - main    # 只在 main 分支 push 时触发
-  workflow_dispatch:  # 可手动触发
+    tags:
+      - 'v*.*.*'   # 匹配 v1.0.0、v2.1.3 等 tag
+  workflow_dispatch:  # 手动触发也可以
 
 jobs:
   build:
@@ -29,7 +30,7 @@ jobs:
       # 5. 构建扩展
       - run: pnpm build
 
-      # 6. 压缩 build 或 dist 文件夹
+      # 6. 压缩 build/dist 文件夹
       - run: |
           zip -r extension.zip dist/*
 
@@ -39,24 +40,13 @@ jobs:
           name: extension-zip
           path: extension.zip
 
-      # 8. 自动生成 tag（根据日期+commit hash）
-      - name: Generate Tag
-        id: tag
-        run: |
-          TAG_NAME="v$(date +'%Y%m%d%H%M%S')"
-          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git tag $TAG_NAME
-          git push origin $TAG_NAME
-
-      # 9. 可选：创建 GitHub Release 并上传 zip
+      # 8. 创建 GitHub Release 并上传 zip
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ env.TAG_NAME }}
-          name: Release ${{ env.TAG_NAME }}
-          body: "自动构建并打 tag 发布"
+          tag_name: ${{ github.ref_name }}   # 使用已有 tag
+          name: Release ${{ github.ref_name }}
+          body: "自动构建并上传 release zip"
           files: extension.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
