@@ -179,7 +179,7 @@ export const checkReverseOrder = async (tab: chrome.tabs.Tab) => {
     target: { tabId: tab.id! },
     func: () => {
       try {
-        const btn = document.querySelector('.order-5 .bn-checkbox-icon') as HTMLButtonElement;
+        const btn = document.querySelector('.order-5 .bn-checkbox') as HTMLButtonElement;
         if (!btn) throw new Error('反向订单按钮不存在, 请确认页面是否正确');
         // 获取aria-checked是否是true
         const isChecked = btn.getAttribute('aria-checked') === 'true';
