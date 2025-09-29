@@ -1,0 +1,25 @@
+name: Formating validation
+
+on: [ pull_request_target ]
+
+jobs:
+  prettier:
+    name: Prettier Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Prettier
+        id: prettier-run
+        uses: rutajdash/prettier-cli-action@v1.0.2
+        with:
+          config_path: ./.prettierrc
+          file_pattern: "*.{js,jsx,ts,tsx,json}"
+
+      - name: Prettier Output
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          echo "The following files aren't formatted properly:"
+          echo "${{steps.prettier-run.outputs.prettier_output}}"
