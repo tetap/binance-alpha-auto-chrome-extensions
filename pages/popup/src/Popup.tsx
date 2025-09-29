@@ -224,57 +224,61 @@ const Popup = () => {
           </div>
         </div>
 
-        <div className="mb-4 mt-4 grid w-full max-w-sm items-center gap-3">
-          <Label>买入价格类型</Label>
-          <RadioGroup name="type" defaultValue="Buy" className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="Buy" id="Buy" />
-              <Label htmlFor="Buy" className="text-xs text-green-500">
-                买入价格(绿色)
-              </Label>
+        <div className={cn(runing ? 'cursor-not-allowed' : '')}>
+          <div className={cn(runing ? 'pointer-events-none' : '')}>
+            <div className="mb-4 mt-4 grid w-full max-w-sm items-center gap-3">
+              <Label>买入价格类型</Label>
+              <RadioGroup name="type" defaultValue="Buy" className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="Buy" id="Buy" />
+                  <Label htmlFor="Buy" className="text-xs text-green-500">
+                    买入价格(绿色)
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="Sell" id="Sell" />
+                  <Label htmlFor="Sell" className="text-xs text-red-500">
+                    卖出价格(红色)
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="Sell" id="Sell" />
-              <Label htmlFor="Sell" className="text-xs text-red-500">
-                卖出价格(红色)
-              </Label>
+
+            <div className="grid w-full max-w-sm items-center gap-3">
+              <Label htmlFor="dot">出售保留小数点</Label>
+              <Input type="text" name="dot" id="dot" placeholder="出售保留小数点" defaultValue={'3'} />
             </div>
-          </RadioGroup>
-        </div>
 
-        <div className="grid w-full max-w-sm items-center gap-3">
-          <Label htmlFor="dot">出售保留小数点</Label>
-          <Input type="text" name="dot" id="dot" placeholder="出售保留小数点" defaultValue={'3'} />
-        </div>
+            <div className="mt-4 grid w-full max-w-sm items-center gap-3">
+              <Label htmlFor="count">保守设置(检测价格波动次数)</Label>
+              <Input type="text" name="count" id="count" placeholder="保守设置(检测价格波动次数)" defaultValue={'3'} />
+            </div>
 
-        <div className="mt-4 grid w-full max-w-sm items-center gap-3">
-          <Label htmlFor="count">保守设置(检测价格波动次数)</Label>
-          <Input type="text" name="count" id="count" placeholder="保守设置(检测价格波动次数)" defaultValue={'3'} />
-        </div>
+            <div className="mt-4 grid w-full max-w-sm items-center gap-3">
+              <Label htmlFor="runNum">操作次数</Label>
+              <Input type="text" name="runNum" id="runNum" placeholder={`操作次数`} defaultValue={'3'} />
+            </div>
 
-        <div className="mt-4 grid w-full max-w-sm items-center gap-3">
-          <Label htmlFor="runNum">操作次数</Label>
-          <Input type="text" name="runNum" id="runNum" placeholder={`操作次数`} defaultValue={'3'} />
-        </div>
+            <div className="mt-4 grid w-full max-w-sm items-center gap-3">
+              <Label htmlFor="timeout">挂单超时(秒)</Label>
+              <Input type="text" name="timeout" id="timeout" placeholder={`挂单超时`} defaultValue={'3'} />
+            </div>
 
-        <div className="mt-4 grid w-full max-w-sm items-center gap-3">
-          <Label htmlFor="timeout">挂单超时(秒)</Label>
-          <Input type="text" name="timeout" id="timeout" placeholder={`挂单超时`} defaultValue={'3'} />
-        </div>
-
-        <div className="mt-4 grid w-full max-w-sm items-center gap-3">
-          <Label htmlFor="amount">下单金额(每次操作金额{'(USDT)'})</Label>
-          <Input
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            type="text"
-            name="amount"
-            id="amount"
-            placeholder={`下单金额(每次操作金额(USDT))`}
-            defaultValue={''}
-          />
+            <div className="mt-4 grid w-full max-w-sm items-center gap-3">
+              <Label htmlFor="amount">下单金额(每次操作金额{'(USDT)'})</Label>
+              <Input
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                type="text"
+                name="amount"
+                id="amount"
+                placeholder={`下单金额(每次操作金额(USDT))`}
+                defaultValue={''}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="mt-4">
