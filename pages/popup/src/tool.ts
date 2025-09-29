@@ -184,7 +184,7 @@ export const checkReverseOrder = async (tab: chrome.tabs.Tab) => {
         // 获取aria-checked是否是true
         const isChecked = btn.getAttribute('aria-checked') === 'true';
         // 点击反向按钮
-        if (isChecked) {
+        if (!isChecked) {
           btn.click();
         }
         return { error: '' };
@@ -201,7 +201,7 @@ export const checkReverseOrder = async (tab: chrome.tabs.Tab) => {
   return result;
 };
 
-// 设置反响订单价格
+// 设置反向订单价格
 export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
