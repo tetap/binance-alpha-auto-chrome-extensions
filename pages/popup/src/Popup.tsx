@@ -102,7 +102,7 @@ const Popup = () => {
             flow = 0;
           }
           lastPrice = buyPrice;
-          await new Promise(resolve => setTimeout(resolve, 300));
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
 
         appendLog(`设置下单价格: ${lastPrice}`, 'info');
