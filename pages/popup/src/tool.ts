@@ -325,7 +325,7 @@ export const checkWaterfall = async (tab: chrome.tabs.Tab) => {
           .filter(Boolean);
         const allSame = prices.every(p => p === prices[0]);
         if (!allSame) {
-          throw new Error('价格波动异常，请检查页面是否正确');
+          throw new Error('价格波动异常，放弃下单');
         }
         return { error: '' };
       } catch (err) {
