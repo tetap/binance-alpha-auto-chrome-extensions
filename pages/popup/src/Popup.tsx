@@ -255,6 +255,11 @@ const Popup = () => {
         </div>
 
         <div className="mt-4 grid w-full max-w-sm items-center gap-3">
+          <Label htmlFor="timeout">挂单超时(秒)</Label>
+          <Input type="text" name="timeout" id="timeout" placeholder={`挂单超时`} defaultValue={'3'} />
+        </div>
+
+        <div className="mt-4 grid w-full max-w-sm items-center gap-3">
           <Label htmlFor="amount">下单金额(每次操作金额{'(USDT)'})</Label>
           <Input
             autoComplete="off"
@@ -267,11 +272,6 @@ const Popup = () => {
             placeholder={`下单金额(每次操作金额(USDT))`}
             defaultValue={''}
           />
-        </div>
-
-        <div className="mt-4 grid w-full max-w-sm items-center gap-3">
-          <Label htmlFor="timeout">挂单超时(秒)</Label>
-          <Input type="text" name="timeout" id="timeout" placeholder={`挂单超时`} defaultValue={'3'} />
         </div>
 
         <div className="mt-4">
