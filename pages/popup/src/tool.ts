@@ -411,17 +411,34 @@ export const checkWaterfall = async (tab: chrome.tabs.Tab) => {
         if (sells.length < 3) {
           return { error: '' };
         }
-        // flex-1 cursor-pointer 获取价格 如果全部一致则不算波动
-        const prices = sells
-          .map(e => {
-            const priceEl = e.querySelector('.flex-1.cursor-pointer');
-            return priceEl?.textContent?.trim();
-          })
-          .filter(Boolean);
-        const allSame = prices.every(p => p === prices[0]);
-        if (!allSame) {
-          throw new Error('价格波动异常，放弃下单');
+        const prices = sells.map(e => {
+          const priceEl = e.querySelector('.flex-1.cursor-pointer');
+          return parseFloat(priceEl?.textContent?.trim() ?? '0');
+        });
+        const maxPrice = Math.max(...prices);
+        const minPrice = Math.min(...prices);
+
+        const diffPercent = ((maxPrice - minPrice) / minPrice) * 100;
+
+        if (diffPercent > 0.1) {
+          return { error: '波动超过 0.1%' };
+        } else {
+          return { error: '' };
         }
+
+        // 判断所有价格区间内是否存在百分0.1以上的波动
+
+        // // flex-1 cursor-pointer 获取价格 如果全部一致则不算波动
+        // const prices = sells
+        //   .map(e => {
+        //     const priceEl = e.querySelector('.flex-1.cursor-pointer');
+        //     return priceEl?.textContent?.trim();
+        //   })
+        //   .filter(Boolean);
+        // const allSame = prices.every(p => p === prices[0]);
+        // if (!allSame) {
+        //   throw new Error('价格波动异常，放弃下单');
+        // }
         return { error: '' };
       } catch (err) {
         return { error: String(err) };

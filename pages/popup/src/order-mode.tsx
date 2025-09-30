@@ -6,11 +6,11 @@ import {
   setAmount,
   triggerBuy,
   checkBuy,
-  // checkWaterfall,
   checkByOrderBuy,
   goToSell,
   checkByOrderSell,
   getIsSell,
+  checkWaterfall,
 } from './tool';
 import { useStorage } from '@extension/shared';
 import { orderSettingStorage, todayDealStorage } from '@extension/storage';
@@ -147,9 +147,10 @@ export const OrderMode = ({
         let flow = 0;
         // 获取一个买入价格
         let lastPrice = '';
+        let fistBuyPrice = '';
 
         // 校验是否大瀑布
-        // await checkWaterfall(tab);
+        await checkWaterfall(tab);
 
         while (flow < count) {
           const buyPrice = await getPrice(tab, data.type);
@@ -161,14 +162,21 @@ export const OrderMode = ({
           } else {
             flow = 0;
           }
+          if (!fistBuyPrice) {
+            fistBuyPrice = buyPrice;
+          }
           lastPrice = buyPrice;
           await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        if (lastPrice > fistBuyPrice) {
+          throw new Error('价格波动较大，跳过交易，开启下一轮');
         }
 
         appendLog(`设置下单价格: ${lastPrice}`, 'info');
 
         // 校验是否大瀑布
-        // await checkWaterfall(tab);
+        await checkWaterfall(tab);
 
         // 设置价格
         await setPrice(tab, lastPrice);
@@ -198,7 +206,7 @@ export const OrderMode = ({
         }
 
         // 校验是否大瀑布
-        // await checkWaterfall(tab);
+        await checkWaterfall(tab);
 
         // 操作确认买入
         await triggerBuy(tab);

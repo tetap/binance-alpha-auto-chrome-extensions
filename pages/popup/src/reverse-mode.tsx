@@ -152,6 +152,7 @@ export const ReverseMode = ({
         let flow = 0;
         // 获取一个买入价格
         let lastPrice = '';
+        let fistBuyPrice = '';
         // 确保打开反向订单
         await checkReverseOrder(tab);
 
@@ -168,8 +169,15 @@ export const ReverseMode = ({
           } else {
             flow = 0;
           }
+          if (!fistBuyPrice) {
+            fistBuyPrice = buyPrice;
+          }
           lastPrice = buyPrice;
           await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        if (lastPrice > fistBuyPrice) {
+          throw new Error('价格波动较大，跳过交易，开启下一轮');
         }
 
         appendLog(`设置下单价格: ${lastPrice}`, 'info');

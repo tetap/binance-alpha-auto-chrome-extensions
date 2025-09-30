@@ -33,7 +33,7 @@ const storage = createStorage<OrderSettingState>(
     runNum: '3',
     count: '3',
     dot: '3',
-    type: 'Sell',
+    type: 'Buy',
     timeoutCount: '3',
     orderAmountMode: 'Fixed',
     maxAmount: '100',
