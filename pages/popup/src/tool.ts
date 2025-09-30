@@ -275,6 +275,9 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
         let loop = true;
         // 如果是卖出订单 赶紧操作补救重新出售
         let sell = document.querySelector('td div[style="color: var(--color-Sell);"]');
+        if (!sell) {
+          loop = false;
+        }
         while (loop) {
           const evt = new MouseEvent('click', {
             bubbles: true,
