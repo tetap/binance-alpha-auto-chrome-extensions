@@ -3,33 +3,31 @@ import deepmerge from 'deepmerge';
 import type { BaseStorageType } from '../base/index.js';
 
 // eslint-disable-next-line import-x/exports-last
-export type SettingState = {
+export type OrderSettingState = {
   amount: string;
   timeout: string;
   runNum: string;
   count: string;
   dot: string;
   type: 'Buy' | 'Sell';
-  mode: 'Reverse' | 'Order';
   // 卖出超时次数(超出次数将以最佳价格卖出止损)
   timeoutCount: string;
 };
 
 // eslint-disable-next-line import-x/exports-last
-export type SettingType = BaseStorageType<SettingState> & {
-  setVal: (val: Partial<SettingState>) => Promise<void>;
+export type OrderSettingType = BaseStorageType<OrderSettingState> & {
+  setVal: (val: Partial<OrderSettingState>) => Promise<void>;
 };
 
-const storage = createStorage<SettingState>(
-  'setting-storage-key',
+const storage = createStorage<OrderSettingState>(
+  'order-setting-storage-key',
   {
     amount: '',
     timeout: '3',
     runNum: '3',
     count: '3',
     dot: '3',
-    type: 'Buy',
-    mode: 'Reverse',
+    type: 'Sell',
     timeoutCount: '2',
   },
   {
@@ -38,9 +36,9 @@ const storage = createStorage<SettingState>(
   },
 );
 
-export const settingStorage: SettingType = {
+export const orderSettingStorage: OrderSettingType = {
   ...storage,
-  setVal: async (val: Partial<SettingState>) => {
+  setVal: async (val: Partial<OrderSettingState>) => {
     await storage.set(currentState => deepmerge(currentState, val));
   },
 };

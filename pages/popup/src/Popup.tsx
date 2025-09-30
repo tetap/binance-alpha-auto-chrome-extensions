@@ -1,4 +1,5 @@
 import '@src/Popup.css';
+import { ReverseMode } from './reverse-mode';
 import {
   getPrice,
   setPrice,
@@ -13,13 +14,27 @@ import {
 } from './tool';
 import { useLogger } from './useLogger';
 import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
-import { settingStorage, todayDealStorage } from '@extension/storage';
-import { Button, cn, ErrorDisplay, Input, Label, LoadingSpinner, RadioGroup, RadioGroupItem } from '@extension/ui';
+import { orderSettingStorage, settingStorage, todayDealStorage } from '@extension/storage';
+import {
+  Button,
+  cn,
+  ErrorDisplay,
+  Input,
+  Label,
+  LoadingSpinner,
+  RadioGroup,
+  RadioGroupItem,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@extension/ui';
 import dayjs from 'dayjs';
 import { useLayoutEffect, useMemo, useState } from 'react';
 
 const Popup = () => {
   const setting = useStorage(settingStorage);
+  const orderSetting = useStorage(orderSettingStorage);
   const deal = useStorage(todayDealStorage);
 
   const todayDeal = useMemo(() => {
@@ -229,8 +244,8 @@ const Popup = () => {
 
   return (
     <div className={cn('bg-slate-50', 'App flex gap-4 p-4')}>
-      <form className="w-1/2" onSubmit={handleSubmit}>
-        <div className="bg-background flex flex-col gap-2 rounded-md p-4 shadow-sm">
+      <div className="w-1/2">
+        <div className="bg-background mb-4 flex flex-col gap-2 rounded-md p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="w-1/2 text-xs">
               开始余额: <b className="text-sm">{startBalance}</b>
@@ -243,110 +258,133 @@ const Popup = () => {
 
         <div className={cn(runing ? 'cursor-not-allowed' : '')}>
           <div className={cn(runing ? 'pointer-events-none' : '')}>
-            <div className="mb-4 mt-4 flex w-full max-w-sm items-center justify-between gap-3">
-              <Label className="w-28 flex-none">买入价格类型</Label>
-              <RadioGroup
-                name="type"
-                defaultValue={setting.type ?? 'Buy'}
-                className="flex items-center gap-4"
-                onValueChange={value => settingStorage.setVal({ type: value as 'Buy' | 'Sell' })}>
-                <div className="flex items-center">
-                  <RadioGroupItem value="Buy" id="Buy" />
-                  <Label htmlFor="Buy" className="pl-2 text-xs text-green-500">
-                    买入价格(绿色)
-                  </Label>
-                </div>
-                <div className="flex items-center">
-                  <RadioGroupItem value="Sell" id="Sell" />
-                  <Label htmlFor="Sell" className="pl-2 text-xs text-red-500">
-                    卖出价格(红色)
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
+            <Tabs defaultValue={setting.mode ?? 'Reverse'} className="w-full">
+              <TabsList>
+                <TabsTrigger value="Reverse">反向订单</TabsTrigger>
+                <TabsTrigger value="Order" disabled>
+                  手动卖出(开发中)
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="Reverse">
+                <ReverseMode
+                  setCurrentBalance={setCurrentBalance}
+                  setRuning={setRuning}
+                  setStartBalance={setStartBalance}
+                  startBalance={startBalance}
+                  runing={runing}
+                  appendLog={appendLog}
+                />
+              </TabsContent>
+              <TabsContent value="Order">
+                <form className="mt-4 flex w-full flex-col gap-4" onSubmit={handleSubmit}>
+                  <div className="flex w-full max-w-sm items-center justify-between gap-3">
+                    <Label className="w-28 flex-none">买入价格类型</Label>
+                    <RadioGroup
+                      name="type"
+                      defaultValue={orderSetting.type ?? 'Sell'}
+                      className="flex items-center gap-4"
+                      onValueChange={value => orderSettingStorage.setVal({ type: value as 'Buy' | 'Sell' })}>
+                      <div className="flex items-center">
+                        <RadioGroupItem value="Buy" id="Buy" />
+                        <Label htmlFor="Buy" className="pl-2 text-xs text-green-500">
+                          买入价格(绿色)
+                        </Label>
+                      </div>
+                      <div className="flex items-center">
+                        <RadioGroupItem value="Sell" id="Sell" />
+                        <Label htmlFor="Sell" className="pl-2 text-xs text-red-500">
+                          卖出价格(红色)
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
 
-            <div className="flex w-full max-w-sm items-center justify-between gap-3">
-              <Label htmlFor="dot" className="w-28 flex-none">
-                出售保留小数点
-              </Label>
-              <Input
-                type="text"
-                name="dot"
-                id="dot"
-                placeholder="出售保留小数点"
-                defaultValue={setting.dot ?? '3'}
-                onChange={e => settingStorage.setVal({ dot: e.target.value ?? '' })}
-              />
-            </div>
+                  <div className="flex w-full max-w-sm items-center justify-between gap-3">
+                    <Label htmlFor="count" className="w-28 flex-none">
+                      保守设置(检测价格波动次数)
+                    </Label>
+                    <Input
+                      type="text"
+                      name="count"
+                      id="count"
+                      placeholder="保守设置(检测价格波动次数)"
+                      defaultValue={orderSetting.count ?? '3'}
+                      onChange={e => orderSettingStorage.setVal({ count: e.target.value ?? '' })}
+                    />
+                  </div>
 
-            <div className="mt-4 flex w-full max-w-sm items-center justify-between gap-3">
-              <Label htmlFor="count" className="w-28 flex-none">
-                保守设置(检测价格波动次数)
-              </Label>
-              <Input
-                type="text"
-                name="count"
-                id="count"
-                placeholder="保守设置(检测价格波动次数)"
-                defaultValue={setting.count ?? '3'}
-                onChange={e => settingStorage.setVal({ count: e.target.value ?? '' })}
-              />
-            </div>
+                  <div className="flex w-full max-w-sm items-center justify-between gap-3">
+                    <Label htmlFor="runNum" className="w-28 flex-none">
+                      操作次数
+                    </Label>
+                    <Input
+                      type="text"
+                      name="runNum"
+                      id="runNum"
+                      placeholder={`操作次数`}
+                      defaultValue={orderSetting.runNum ?? '1'}
+                      onChange={e => orderSettingStorage.setVal({ runNum: e.target.value ?? '' })}
+                    />
+                  </div>
 
-            <div className="mt-4 flex w-full max-w-sm items-center justify-between gap-3">
-              <Label htmlFor="runNum" className="w-28 flex-none">
-                操作次数
-              </Label>
-              <Input
-                type="text"
-                name="runNum"
-                id="runNum"
-                placeholder={`操作次数`}
-                defaultValue={setting.runNum ?? '1'}
-                onChange={e => settingStorage.setVal({ runNum: e.target.value ?? '' })}
-              />
-            </div>
+                  <div className="flex w-full max-w-sm items-center justify-between gap-3">
+                    <Label htmlFor="timeout" className="w-28 flex-none">
+                      挂单超时(秒)
+                    </Label>
+                    <Input
+                      type="text"
+                      name="timeout"
+                      id="timeout"
+                      placeholder={`挂单超时`}
+                      defaultValue={orderSetting.timeout ?? '3'}
+                      onChange={e => orderSettingStorage.setVal({ timeout: e.target.value ?? '' })}
+                    />
+                  </div>
 
-            <div className="mt-4 flex w-full max-w-sm items-center justify-between gap-3">
-              <Label htmlFor="timeout" className="w-28 flex-none">
-                挂单超时(秒)
-              </Label>
-              <Input
-                type="text"
-                name="timeout"
-                id="timeout"
-                placeholder={`挂单超时`}
-                defaultValue={setting.timeout ?? '3'}
-                onChange={e => settingStorage.setVal({ timeout: e.target.value ?? '' })}
-              />
-            </div>
+                  <div className="flex w-full max-w-sm items-center justify-between gap-3">
+                    <Label htmlFor="timeoutCount" className="w-28 flex-none">
+                      卖出超时次数(超出次数将以最佳价格卖出止损)
+                    </Label>
+                    <Input
+                      type="text"
+                      name="timeoutCount"
+                      id="timeoutCount"
+                      placeholder={`卖出超时次数(超出次数将以最佳价格卖出止损)`}
+                      defaultValue={orderSetting.timeoutCount ?? '3'}
+                      onChange={e => orderSettingStorage.setVal({ timeoutCount: e.target.value ?? '' })}
+                    />
+                  </div>
 
-            <div className="mt-4 flex w-full max-w-sm items-center justify-between gap-3">
-              <Label htmlFor="amount" className="w-28 flex-none">
-                下单金额(每次操作金额{'(USDT)'})
-              </Label>
-              <Input
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                type="text"
-                name="amount"
-                id="amount"
-                placeholder={`下单金额(每次操作金额(USDT))`}
-                defaultValue={setting.amount ?? ''}
-                onChange={e => settingStorage.setVal({ amount: e.target.value ?? '' })}
-              />
-            </div>
+                  <div className="flex w-full max-w-sm items-center justify-between gap-3">
+                    <Label htmlFor="amount" className="w-28 flex-none">
+                      下单金额(每次操作金额{'(USDT)'})
+                    </Label>
+                    <Input
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      type="text"
+                      name="amount"
+                      id="amount"
+                      placeholder={`下单金额(每次操作金额(USDT))`}
+                      defaultValue={orderSetting.amount ?? ''}
+                      onChange={e => orderSettingStorage.setVal({ amount: e.target.value ?? '' })}
+                    />
+                  </div>
+
+                  <div>
+                    <Button className="w-full" type="submit" disabled={runing || !startBalance}>
+                      执行
+                    </Button>
+                  </div>
+                </form>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
+      </div>
 
-        <div className="mt-4">
-          <Button className="w-full" type="submit" disabled={runing || !startBalance}>
-            执行
-          </Button>
-        </div>
-      </form>
       <div className="flex w-1/2 flex-col gap-2">
         <div className="flex flex-none items-center justify-between text-sm font-bold">
           <div>日志输出</div>

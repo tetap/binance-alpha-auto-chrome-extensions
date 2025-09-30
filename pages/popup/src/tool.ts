@@ -272,16 +272,17 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
           }
           throw new Error('买入订单超时，请检查页面是否正确');
         }
-        // TODO：如果是卖出订单 赶紧操作补救重新出售
+        let loop = true;
+        // 如果是卖出订单 赶紧操作补救重新出售
         let sell = document.querySelector('td div[style="color: var(--color-Sell);"]');
-        while (sell) {
+        while (loop) {
           const evt = new MouseEvent('click', {
             bubbles: true,
             cancelable: true,
             view: window,
           });
           // 取消卖出订单
-          const svg = sell.parentNode!.parentNode!.querySelector('svg');
+          const svg = sell!.parentNode!.parentNode!.querySelector('svg');
           if (svg) {
             svg.dispatchEvent(evt);
           }
@@ -304,17 +305,6 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
           if (isChecked) {
             btn.click();
           }
-          // 设置金额
-          const sider = document.querySelector('.order-5 input[type="range"]') as any;
-          if (!sider) throw new Error('补救卖出面板滑块不存在, 请确认页面是否正确');
-          const lastValue = sider.value;
-          sider.value = '100';
-          const tracker1 = sider._valueTracker;
-          if (tracker1) {
-            tracker1.setValue(lastValue);
-          }
-          sider.dispatchEvent(new Event('input', { bubbles: true }));
-          sider.dispatchEvent(new Event('change', { bubbles: true }));
 
           // 获取卖出价格
           const priceEl = document.querySelector(`.ReactVirtualized__List [style*="--color-Sell"]`) as HTMLSpanElement;
@@ -332,6 +322,18 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
           }
           limitPrice.dispatchEvent(new Event('input', { bubbles: true }));
           limitPrice.dispatchEvent(new Event('change', { bubbles: true }));
+
+          // 设置金额
+          const sider = document.querySelector('.order-5 input[type="range"]') as any;
+          if (!sider) throw new Error('补救卖出面板滑块不存在, 请确认页面是否正确');
+          const lastValue = sider.value;
+          sider.value = '100';
+          const tracker1 = sider._valueTracker;
+          if (tracker1) {
+            tracker1.setValue(lastValue);
+          }
+          sider.dispatchEvent(new Event('input', { bubbles: true }));
+          sider.dispatchEvent(new Event('change', { bubbles: true }));
 
           // 确认卖出
           const submitBtn = document.querySelector('.order-5 button') as HTMLButtonElement;
@@ -352,8 +354,9 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
             }
             count++;
           }
-          // 等待3秒后再次检测
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          // 等待{timeout}秒后再次检测
+          await new Promise(resolve => setTimeout(resolve, timeout));
+          // 校验是否还有可用余额
           // 再次校验是否还有卖出订单
           sell = document.querySelector('td div[style="color: var(--color-Sell);"]');
           if (!sell) {
@@ -365,6 +368,7 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
               throw new Error('买入面板元素不存在, 请确认页面是否正确');
             }
             buyPanel.click();
+            loop = false;
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
