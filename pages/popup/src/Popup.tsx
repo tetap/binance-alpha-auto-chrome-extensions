@@ -13,12 +13,13 @@ import {
 } from './tool';
 import { useLogger } from './useLogger';
 import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
-import { todayDealStorage } from '@extension/storage';
+import { settingStorage, todayDealStorage } from '@extension/storage';
 import { Button, cn, ErrorDisplay, Input, Label, LoadingSpinner, RadioGroup, RadioGroupItem } from '@extension/ui';
 import dayjs from 'dayjs';
 import { useLayoutEffect, useMemo, useState } from 'react';
 
 const Popup = () => {
+  const setting = useStorage(settingStorage);
   const deal = useStorage(todayDealStorage);
 
   const todayDeal = useMemo(() => {
@@ -242,46 +243,88 @@ const Popup = () => {
 
         <div className={cn(runing ? 'cursor-not-allowed' : '')}>
           <div className={cn(runing ? 'pointer-events-none' : '')}>
-            <div className="mb-4 mt-4 grid w-full max-w-sm items-center gap-3">
-              <Label>买入价格类型</Label>
-              <RadioGroup name="type" defaultValue="Buy" className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
+            <div className="mb-4 mt-4 flex w-full max-w-sm items-center justify-between gap-3">
+              <Label className="w-28 flex-none">买入价格类型</Label>
+              <RadioGroup
+                name="type"
+                defaultValue={setting.type ?? 'Buy'}
+                className="flex items-center gap-4"
+                onValueChange={value => settingStorage.setVal({ type: value as 'Buy' | 'Sell' })}>
+                <div className="flex items-center">
                   <RadioGroupItem value="Buy" id="Buy" />
-                  <Label htmlFor="Buy" className="text-xs text-green-500">
+                  <Label htmlFor="Buy" className="pl-2 text-xs text-green-500">
                     买入价格(绿色)
                   </Label>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center">
                   <RadioGroupItem value="Sell" id="Sell" />
-                  <Label htmlFor="Sell" className="text-xs text-red-500">
+                  <Label htmlFor="Sell" className="pl-2 text-xs text-red-500">
                     卖出价格(红色)
                   </Label>
                 </div>
               </RadioGroup>
             </div>
 
-            <div className="grid w-full max-w-sm items-center gap-3">
-              <Label htmlFor="dot">出售保留小数点</Label>
-              <Input type="text" name="dot" id="dot" placeholder="出售保留小数点" defaultValue={'3'} />
+            <div className="flex w-full max-w-sm items-center justify-between gap-3">
+              <Label htmlFor="dot" className="w-28 flex-none">
+                出售保留小数点
+              </Label>
+              <Input
+                type="text"
+                name="dot"
+                id="dot"
+                placeholder="出售保留小数点"
+                defaultValue={setting.dot ?? '3'}
+                onChange={e => settingStorage.setVal({ dot: e.target.value ?? '' })}
+              />
             </div>
 
-            <div className="mt-4 grid w-full max-w-sm items-center gap-3">
-              <Label htmlFor="count">保守设置(检测价格波动次数)</Label>
-              <Input type="text" name="count" id="count" placeholder="保守设置(检测价格波动次数)" defaultValue={'3'} />
+            <div className="mt-4 flex w-full max-w-sm items-center justify-between gap-3">
+              <Label htmlFor="count" className="w-28 flex-none">
+                保守设置(检测价格波动次数)
+              </Label>
+              <Input
+                type="text"
+                name="count"
+                id="count"
+                placeholder="保守设置(检测价格波动次数)"
+                defaultValue={setting.count ?? '3'}
+                onChange={e => settingStorage.setVal({ count: e.target.value ?? '' })}
+              />
             </div>
 
-            <div className="mt-4 grid w-full max-w-sm items-center gap-3">
-              <Label htmlFor="runNum">操作次数</Label>
-              <Input type="text" name="runNum" id="runNum" placeholder={`操作次数`} defaultValue={'3'} />
+            <div className="mt-4 flex w-full max-w-sm items-center justify-between gap-3">
+              <Label htmlFor="runNum" className="w-28 flex-none">
+                操作次数
+              </Label>
+              <Input
+                type="text"
+                name="runNum"
+                id="runNum"
+                placeholder={`操作次数`}
+                defaultValue={setting.runNum ?? '1'}
+                onChange={e => settingStorage.setVal({ runNum: e.target.value ?? '' })}
+              />
             </div>
 
-            <div className="mt-4 grid w-full max-w-sm items-center gap-3">
-              <Label htmlFor="timeout">挂单超时(秒)</Label>
-              <Input type="text" name="timeout" id="timeout" placeholder={`挂单超时`} defaultValue={'3'} />
+            <div className="mt-4 flex w-full max-w-sm items-center justify-between gap-3">
+              <Label htmlFor="timeout" className="w-28 flex-none">
+                挂单超时(秒)
+              </Label>
+              <Input
+                type="text"
+                name="timeout"
+                id="timeout"
+                placeholder={`挂单超时`}
+                defaultValue={setting.timeout ?? '3'}
+                onChange={e => settingStorage.setVal({ timeout: e.target.value ?? '' })}
+              />
             </div>
 
-            <div className="mt-4 grid w-full max-w-sm items-center gap-3">
-              <Label htmlFor="amount">下单金额(每次操作金额{'(USDT)'})</Label>
+            <div className="mt-4 flex w-full max-w-sm items-center justify-between gap-3">
+              <Label htmlFor="amount" className="w-28 flex-none">
+                下单金额(每次操作金额{'(USDT)'})
+              </Label>
               <Input
                 autoComplete="off"
                 autoCorrect="off"
@@ -291,7 +334,8 @@ const Popup = () => {
                 name="amount"
                 id="amount"
                 placeholder={`下单金额(每次操作金额(USDT))`}
-                defaultValue={''}
+                defaultValue={setting.amount ?? ''}
+                onChange={e => settingStorage.setVal({ amount: e.target.value ?? '' })}
               />
             </div>
           </div>
