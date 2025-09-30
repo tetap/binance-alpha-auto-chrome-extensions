@@ -33,14 +33,17 @@ import dayjs from 'dayjs';
 import { useLayoutEffect, useMemo, useState } from 'react';
 
 const Popup = () => {
+  const [num, setNum] = useState(0);
   const setting = useStorage(settingStorage);
   const orderSetting = useStorage(orderSettingStorage);
   const deal = useStorage(todayDealStorage);
 
   const todayDeal = useMemo(() => {
     const day = dayjs().format('YYYY-MM-DD');
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    typeof num;
     return deal[day] ?? '0';
-  }, [deal]);
+  }, [deal, num]);
 
   const [runing, setRuning] = useState(false);
   // 开始余额
@@ -273,6 +276,7 @@ const Popup = () => {
                   startBalance={startBalance}
                   runing={runing}
                   appendLog={appendLog}
+                  setNum={setNum}
                 />
               </TabsContent>
               <TabsContent value="Order">

@@ -23,6 +23,7 @@ export interface IRerverseModeProps {
   runing: boolean;
   setRuning: (runing: boolean) => void;
   appendLog: (msg: string, type: 'success' | 'error' | 'info') => void;
+  setNum: (num: number) => void;
 }
 
 export const ReverseMode = ({
@@ -32,6 +33,7 @@ export const ReverseMode = ({
   runing,
   setRuning,
   appendLog,
+  setNum,
 }: IRerverseModeProps) => {
   const setting = useStorage(settingStorage);
 
@@ -175,6 +177,8 @@ export const ReverseMode = ({
         const day = dayjs().format('YYYY-MM-DD');
 
         todayDealStorage.setVal(day, data.amount);
+
+        setNum(Date.now());
 
         appendLog(`下单成功: ${data.amount}(USDT) 下单价格: ${lastPrice} 反向价格: ${truncated}`, 'success');
 
