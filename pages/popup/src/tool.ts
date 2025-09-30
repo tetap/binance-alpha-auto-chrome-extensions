@@ -149,8 +149,8 @@ export const checkBuy = async (tab: chrome.tabs.Tab) => {
     func: async () => {
       try {
         let count = 0;
-        // 1000 / 30 每秒30fps 最多等待1秒
-        while (count < 32) {
+        // 1000 / 30 每秒30fps 最多等待2秒
+        while (count < 64) {
           await new Promise(resolve => setTimeout(resolve, 1000 / 30));
           const btn = document
             .querySelector(`div[role='dialog'][class='bn-modal-wrap data-size-small']`)

@@ -108,8 +108,6 @@ export const OrderMode = ({
     let errorCount = 0;
     for (let i = 0; i < runNum; i++) {
       try {
-        let isSuccess = false;
-
         appendLog(`当前轮次: ${i + 1}`, 'info');
 
         const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
@@ -117,7 +115,8 @@ export const OrderMode = ({
         // 校验是否有需要卖出
         appendLog(`校验是否有需要卖出`, 'info');
         const isSell = await getIsSell(tab);
-
+        let sum = 0;
+        let isSuccess = false;
         while (isSell) {
           await goToSell(tab, true);
           const check = await checkByOrderSell(tab, Number(data.timeout)).catch(err => {
@@ -222,8 +221,6 @@ export const OrderMode = ({
         await checkByOrderBuy(tab, Number(data.timeout));
 
         appendLog('前往卖出', 'info');
-
-        let sum = 0;
 
         const timeoutCount = Number(data.timeoutCount);
 
