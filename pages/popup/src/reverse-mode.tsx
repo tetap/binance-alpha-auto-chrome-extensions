@@ -176,7 +176,7 @@ export const ReverseMode = ({
           await new Promise(resolve => setTimeout(resolve, 500));
         }
 
-        if (lastPrice > fistBuyPrice) {
+        if (lastPrice != fistBuyPrice) {
           throw new Error('价格波动较大，跳过交易，开启下一轮');
         }
 
