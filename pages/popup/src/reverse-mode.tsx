@@ -13,8 +13,9 @@ import {
 } from './tool';
 import { useStorage } from '@extension/shared';
 import { settingStorage, todayDealStorage } from '@extension/storage';
-import { Button, Input, Label, RadioGroup, RadioGroupItem } from '@extension/ui';
+import { Button, cn, Input, Label, RadioGroup, RadioGroupItem } from '@extension/ui';
 import dayjs from 'dayjs';
+import { floor } from 'lodash-es';
 
 export interface IRerverseModeProps {
   setCurrentBalance: (balance: string) => void;
@@ -50,22 +51,57 @@ export const ReverseMode = ({
       type: 'Buy' | 'Sell';
       runNum: string;
       timeout: string;
+      orderAmountMode: 'Fixed' | 'Random';
+      maxAmount: string;
+      minAmount: string;
     };
 
-    if (!data.amount || !data.count || !data.dot || !data.type || !data.runNum || !data.timeout) {
+    if (!data.count || !data.dot || !data.type || !data.runNum || !data.timeout) {
       appendLog('参数不能为空', 'error');
       setRuning(false);
       return;
     }
     // 校验amount count dot runNum 是否为数字
     if (
-      isNaN(Number(data.amount)) ||
       isNaN(Number(data.count)) ||
       isNaN(Number(data.dot)) ||
       isNaN(Number(data.runNum)) ||
       isNaN(Number(data.timeout))
     ) {
       appendLog('参数必须为数字', 'error');
+      setRuning(false);
+      return;
+    }
+    // 校验下单金额
+    if (data.orderAmountMode === 'Fixed') {
+      if (!data.amount) {
+        appendLog('下单金额不能为空', 'error');
+        setRuning(false);
+        return;
+      }
+      if (isNaN(Number(data.amount))) {
+        appendLog('下单金额必须为数字', 'error');
+        setRuning(false);
+        return;
+      }
+    } else if (data.orderAmountMode === 'Random') {
+      if (!data.maxAmount || !data.minAmount) {
+        appendLog('下单金额范围不能为空', 'error');
+        setRuning(false);
+        return;
+      }
+      if (isNaN(Number(data.maxAmount)) || isNaN(Number(data.minAmount))) {
+        appendLog('下单金额范围必须为数字', 'error');
+        setRuning(false);
+        return;
+      }
+      if (Number(data.maxAmount) < Number(data.minAmount)) {
+        appendLog('下单金额范围错误', 'error');
+        setRuning(false);
+        return;
+      }
+    } else {
+      appendLog('下单金额模式错误', 'error');
       setRuning(false);
       return;
     }
@@ -87,10 +123,19 @@ export const ReverseMode = ({
         }
 
         setCurrentBalance(balance);
-        // 设置操作金额
-        setAmount(tab, Number(data.amount));
 
-        appendLog(`设置操作金额成功: ${data.amount}`, 'info');
+        const amount =
+          data.orderAmountMode === 'Fixed'
+            ? data.amount
+            : floor(
+                (Number(data.maxAmount) - Number(data.minAmount)) * Math.random() + Number(data.minAmount),
+                2,
+              ).toString();
+
+        // 设置操作金额
+        setAmount(tab, Number(amount));
+
+        appendLog(`设置操作金额成功: ${amount}`, 'info');
 
         const count = Number(data.count);
         // 计数
@@ -176,11 +221,11 @@ export const ReverseMode = ({
 
         const day = dayjs().format('YYYY-MM-DD');
 
-        todayDealStorage.setVal(day, data.amount);
+        todayDealStorage.setVal(day, amount);
 
         setNum(Date.now());
 
-        appendLog(`下单成功: ${data.amount}(USDT) 下单价格: ${lastPrice} 反向价格: ${truncated}`, 'success');
+        appendLog(`下单成功: ${amount}(USDT) 下单价格: ${lastPrice} 反向价格: ${truncated}`, 'success');
 
         errorCount = 0;
       } catch (error: unknown) {
@@ -291,6 +336,32 @@ export const ReverseMode = ({
       </div>
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
+        <Label className="w-28 flex-none">下单金额模式</Label>
+        <RadioGroup
+          name="orderAmountMode"
+          defaultValue={setting.orderAmountMode ?? 'Fixed'}
+          className="flex items-center gap-4"
+          onValueChange={value => settingStorage.setVal({ orderAmountMode: value as 'Fixed' | 'Random' })}>
+          <div className="flex items-center">
+            <RadioGroupItem value="Fixed" id="Fixed" />
+            <Label htmlFor="Fixed" className="pl-2 text-xs">
+              固定
+            </Label>
+          </div>
+          <div className="flex items-center">
+            <RadioGroupItem value="Random" id="Random" />
+            <Label htmlFor="Random" className="pl-2 text-xs text-red-500">
+              随机
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      <div
+        className={cn(
+          'flex w-full max-w-sm items-center justify-between gap-3',
+          setting.orderAmountMode === 'Random' ? 'hidden' : '',
+        )}>
         <Label htmlFor="amount" className="w-28 flex-none">
           下单金额(每次操作金额{'(USDT)'})
         </Label>
@@ -306,6 +377,41 @@ export const ReverseMode = ({
           defaultValue={setting.amount ?? ''}
           onChange={e => settingStorage.setVal({ amount: e.target.value ?? '' })}
         />
+      </div>
+
+      <div
+        className={cn(
+          'flex w-full max-w-sm items-center justify-between gap-3',
+          setting.orderAmountMode === 'Fixed' ? 'hidden' : '',
+        )}>
+        <Label className="w-28 flex-none">下单金额(每次操作金额{'(USDT)'})</Label>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Input
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            type="text"
+            name="minAmount"
+            id="minAmount"
+            placeholder={`最小金额`}
+            defaultValue={setting.minAmount ?? '50'}
+            onChange={e => settingStorage.setVal({ minAmount: e.target.value ?? '' })}
+          />
+          <div>-</div>
+          <Input
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            type="text"
+            name="maxAmount"
+            id="maxAmount"
+            placeholder={`最大金额`}
+            defaultValue={setting.maxAmount ?? '100'}
+            onChange={e => settingStorage.setVal({ maxAmount: e.target.value ?? '' })}
+          />
+        </div>
       </div>
 
       <div>

@@ -24,7 +24,9 @@
     "@extension/shared": "workspace:*",
     "@extension/storage": "workspace:*",
     "@extension/ui": "workspace:*",
-    "dayjs": "^1.11.18"
+    "@types/lodash-es": "^4.17.12",
+    "dayjs": "^1.11.18",
+    "lodash-es": "^4.17.21"
   },
   "devDependencies": {
     "@extension/tailwindcss-config": "workspace:*",
