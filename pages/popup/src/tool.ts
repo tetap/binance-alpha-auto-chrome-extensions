@@ -453,6 +453,17 @@ export const goToSell = async (tab: chrome.tabs.Tab, reverse: boolean = false): 
         await new Promise(resolve => setTimeout(resolve, 300));
         sellPanel.click();
         await new Promise(resolve => setTimeout(resolve, 300));
+
+        // 关闭反向订单
+        const btn = document.querySelector('.order-5 .bn-checkbox') as HTMLButtonElement;
+        if (!btn) throw new Error('操作卖出反向订单按钮不存在, 请确认页面是否正确');
+        // 获取aria-checked是否是true
+        const isChecked = btn.getAttribute('aria-checked') === 'true';
+        // 点击反向按钮
+        if (isChecked) {
+          btn.click();
+        }
+
         const priceEl = document.querySelector(
           `.ReactVirtualized__List [style*="--color-${reverse ? 'Sell' : 'Buy'}"]`,
         ) as HTMLSpanElement;
@@ -665,6 +676,10 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
         sider.dispatchEvent(new Event('input', { bubbles: true }));
         sider.dispatchEvent(new Event('change', { bubbles: true }));
         await new Promise(resolve => setTimeout(resolve, 16));
+        const error = document.querySelector('div.bn-textField__line.data-error')?.querySelector('#limitTotal');
+        if (error) {
+          return { error: '', val: true };
+        }
         if (sider.value >= 10) {
           return { error: '', val: true };
         }

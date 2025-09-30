@@ -16,6 +16,7 @@ import { useStorage } from '@extension/shared';
 import { orderSettingStorage, todayDealStorage } from '@extension/storage';
 import { Button, cn, Input, Label, RadioGroup, RadioGroupItem } from '@extension/ui';
 import dayjs from 'dayjs';
+import { floor } from 'lodash-es';
 
 export interface IOrderModeProps {
   setCurrentBalance: (balance: string) => void;
@@ -141,8 +142,6 @@ export const OrderMode = ({
 
         setCurrentBalance(balance);
 
-        appendLog(`设置操作金额成功: ${data.amount}`, 'info');
-
         const count = Number(data.count);
         // 计数
         let flow = 0;
@@ -174,8 +173,18 @@ export const OrderMode = ({
         // 设置价格
         await setPrice(tab, lastPrice);
 
+        const amount =
+          data.orderAmountMode === 'Fixed'
+            ? data.amount
+            : floor(
+                (Number(data.maxAmount) - Number(data.minAmount)) * Math.random() + Number(data.minAmount),
+                2,
+              ).toString();
+
         // 设置操作金额
-        setAmount(tab, Number(data.amount));
+        setAmount(tab, Number(amount));
+
+        appendLog(`设置操作金额成功: ${amount}`, 'info');
 
         appendLog(`执行瀑布检测`, 'info');
 
@@ -262,11 +271,11 @@ export const OrderMode = ({
 
         const day = dayjs().format('YYYY-MM-DD');
 
-        todayDealStorage.setVal(day, data.amount);
+        todayDealStorage.setVal(day, amount);
 
         setNum(Date.now());
 
-        appendLog(`下单成功: ${data.amount}(USDT) 下单价格: ${lastPrice} 卖出价格: ${submitPrice}`, 'success');
+        appendLog(`下单成功: ${amount}(USDT) 下单价格: ${lastPrice} 卖出价格: ${submitPrice}`, 'success');
 
         errorCount = 0;
       } catch (error: unknown) {

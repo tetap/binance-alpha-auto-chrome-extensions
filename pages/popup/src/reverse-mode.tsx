@@ -147,19 +147,6 @@ export const ReverseMode = ({
 
         setCurrentBalance(balance);
 
-        const amount =
-          data.orderAmountMode === 'Fixed'
-            ? data.amount
-            : floor(
-                (Number(data.maxAmount) - Number(data.minAmount)) * Math.random() + Number(data.minAmount),
-                2,
-              ).toString();
-
-        // 设置操作金额
-        setAmount(tab, Number(amount));
-
-        appendLog(`设置操作金额成功: ${amount}`, 'info');
-
         const count = Number(data.count);
         // 计数
         let flow = 0;
@@ -192,6 +179,19 @@ export const ReverseMode = ({
 
         // 设置价格
         await setPrice(tab, lastPrice);
+
+        const amount =
+          data.orderAmountMode === 'Fixed'
+            ? data.amount
+            : floor(
+                (Number(data.maxAmount) - Number(data.minAmount)) * Math.random() + Number(data.minAmount),
+                2,
+              ).toString();
+
+        // 设置操作金额
+        setAmount(tab, Number(amount));
+
+        appendLog(`设置操作金额成功: ${amount}`, 'info');
 
         appendLog(`执行瀑布检测`, 'info');
 
