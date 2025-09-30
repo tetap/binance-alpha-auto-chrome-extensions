@@ -12,6 +12,12 @@ export type OrderSettingState = {
   type: 'Buy' | 'Sell';
   // 卖出超时次数(超出次数将以最佳价格卖出止损)
   timeoutCount: string;
+  // 下单金额模式 固定金额 随机金额
+  orderAmountMode: 'Fixed' | 'Random';
+  // 最高随机金额
+  maxAmount: string;
+  // 最低随机金额
+  minAmount: string;
 };
 
 // eslint-disable-next-line import-x/exports-last
@@ -28,7 +34,10 @@ const storage = createStorage<OrderSettingState>(
     count: '3',
     dot: '3',
     type: 'Sell',
-    timeoutCount: '2',
+    timeoutCount: '3',
+    orderAmountMode: 'Fixed',
+    maxAmount: '100',
+    minAmount: '50',
   },
   {
     storageEnum: StorageEnum.Local,

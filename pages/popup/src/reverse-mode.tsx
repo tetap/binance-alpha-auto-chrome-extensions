@@ -10,6 +10,9 @@ import {
   setReversePrice,
   checkOrder,
   checkWaterfall,
+  getIsSell,
+  goToSell,
+  checkByOrderSell,
 } from './tool';
 import { useStorage } from '@extension/shared';
 import { settingStorage, todayDealStorage } from '@extension/storage';
@@ -114,6 +117,26 @@ export const ReverseMode = ({
 
         const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
 
+        // 校验是否有需要卖出
+        appendLog(`校验是否有需要卖出`, 'info');
+        const isSell = await getIsSell(tab);
+        let sum = 0,
+          isSuccess = false;
+
+        while (isSell) {
+          await goToSell(tab, true);
+          const check = await checkByOrderSell(tab, Number(data.timeout)).catch(err => {
+            appendLog(`卖出超时${sum + 1}次: ${err.message}`, 'error');
+            isSuccess = false;
+            sum++;
+            return { error: err.message };
+          });
+          isSuccess = check?.error ? false : true;
+          if (isSuccess) {
+            break;
+          }
+        }
+
         const balance = await getBalance(tab);
 
         if (!balance) return console.error('获取余额失败');
@@ -191,6 +214,9 @@ export const ReverseMode = ({
         await setReversePrice(tab, truncated.toString());
 
         appendLog(`设置反向订单价格: ${truncated}`, 'info');
+
+        // 校验是否大瀑布
+        await checkWaterfall(tab);
 
         // 操作确认买入
         await triggerBuy(tab);

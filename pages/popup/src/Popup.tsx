@@ -66,7 +66,10 @@ const Popup = () => {
 
         <div className={cn(runing ? 'cursor-not-allowed' : '')}>
           <div className={cn(runing ? 'pointer-events-none' : '')}>
-            <Tabs defaultValue={setting.mode ?? 'Reverse'} className="w-full">
+            <Tabs
+              defaultValue={setting.mode ?? 'Reverse'}
+              className="w-full"
+              onValueChange={value => settingStorage.setVal({ mode: value as 'Reverse' | 'Order' })}>
               <TabsList>
                 <TabsTrigger value="Reverse">反向订单</TabsTrigger>
                 <TabsTrigger value="Order">手动卖出</TabsTrigger>

@@ -1,11 +1,9 @@
 // 获取价格
 export const getPrice = async (tab: chrome.tabs.Tab, type: 'Buy' | 'Sell') => {
-  // const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
-
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
     args: [type],
-    func: type => {
+    func: async type => {
       try {
         const priceEl = document.querySelector(`.ReactVirtualized__List [style*="--color-${type}"]`) as HTMLSpanElement;
         if (!priceEl) throw new Error('价格元素不存在, 请确认页面是否正确');
@@ -34,11 +32,10 @@ export const setPrice = async (tab: chrome.tabs.Tab, price: string) => {
       try {
         const limitPrice = document.querySelector('input#limitPrice') as any;
         if (!limitPrice) throw new Error('成交价格元素不存在, 请确认页面是否正确');
-        const lastValue = limitPrice.value;
         limitPrice.value = price;
         const tracker1 = limitPrice._valueTracker;
         if (tracker1) {
-          tracker1.setValue(lastValue);
+          tracker1.setValue(limitPrice.value);
         }
         limitPrice.dispatchEvent(new Event('input', { bubbles: true }));
         limitPrice.dispatchEvent(new Event('change', { bubbles: true }));
@@ -61,8 +58,14 @@ export const setPrice = async (tab: chrome.tabs.Tab, price: string) => {
 export const getBalance = async (tab: chrome.tabs.Tab) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
-    func: () => {
+    func: async () => {
       try {
+        const buyPanel = document.querySelector('.bn-tab__buySell[aria-controls="bn-tab-pane-0"]') as HTMLButtonElement;
+        if (!buyPanel) {
+          throw new Error('买入面板元素不存在, 请确认页面是否正确');
+        }
+        buyPanel.click();
+        await new Promise(resolve => setTimeout(resolve, 1000));
         const UsdtEle = document.querySelector(
           "div[class='text-PrimaryText text-[12px] leading-[18px] font-[500]']",
         ) as HTMLSpanElement;
@@ -91,11 +94,10 @@ export const setAmount = async (tab: chrome.tabs.Tab, amount: number) => {
       try {
         const limitTotal = document.querySelector('input#limitTotal') as any;
         if (!limitTotal) throw new Error('limitTotal元素不存在, 请确认页面是否正确');
-        const lastValue = limitTotal.value;
         limitTotal.value = amount;
         const tracker1 = limitTotal._valueTracker;
         if (tracker1) {
-          tracker1.setValue(lastValue);
+          tracker1.setValue(limitTotal.value);
         }
         limitTotal.dispatchEvent(new Event('input', { bubbles: true }));
         limitTotal.dispatchEvent(new Event('change', { bubbles: true }));
@@ -211,11 +213,10 @@ export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) => {
         const limitTotals = document.querySelectorAll('input#limitTotal');
         if (!limitTotals.length || limitTotals.length < 2) throw new Error('反向价格元素不存在, 请确认页面是否正确');
         const limitTotal = limitTotals[1] as any;
-        const lastValue = limitTotal.value;
         limitTotal.value = price;
         const tracker1 = limitTotal._valueTracker;
         if (tracker1) {
-          tracker1.setValue(lastValue);
+          tracker1.setValue(limitTotal.value);
         }
         limitTotal.dispatchEvent(new Event('input', { bubbles: true }));
         limitTotal.dispatchEvent(new Event('change', { bubbles: true }));
@@ -233,7 +234,7 @@ export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) => {
   return result;
 };
 
-// 设置订单
+// 校验订单 反向模式
 export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
@@ -247,8 +248,8 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
         if (!limit) throw new Error('限价元素不存在, 请确认页面是否正确');
         let count = 0;
         while (true) {
-          const buy = document.querySelector('td div[style="color: var(--color-Buy);"]');
-          const sell = document.querySelector('td div[style="color: var(--color-Sell);"]');
+          const buy = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Buy);"]');
+          const sell = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Sell);"]');
           if (!buy && !sell) break;
           await new Promise(resolve => setTimeout(resolve, 1000 / 30));
           count++;
@@ -259,7 +260,7 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
           }
         }
         // 如果是买入订单赶紧取消
-        const buy = document.querySelector('td div[style="color: var(--color-Buy);"]');
+        const buy = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Buy);"]');
         if (buy) {
           const evt = new MouseEvent('click', {
             bubbles: true,
@@ -269,12 +270,14 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
           const svg = buy.parentNode!.parentNode!.querySelector('svg');
           if (svg) {
             svg.dispatchEvent(evt);
+          } else {
+            throw new Error('买入订单取消失败，请检查页面是否正确');
           }
           throw new Error('买入订单超时，请检查页面是否正确');
         }
         let loop = true;
         // 如果是卖出订单 赶紧操作补救重新出售
-        let sell = document.querySelector('td div[style="color: var(--color-Sell);"]');
+        let sell = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Sell);"]');
         if (!sell) {
           loop = false;
         }
@@ -288,8 +291,10 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
           const svg = sell!.parentNode!.parentNode!.querySelector('svg');
           if (svg) {
             svg.dispatchEvent(evt);
+          } else {
+            throw new Error('卖出订单取消失败，请检查页面是否正确');
           }
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 1500));
           // 跳转卖出面板
           const sellPanel = document.querySelector(
             '.bn-tab__buySell[aria-controls="bn-tab-pane-1"]',
@@ -298,7 +303,9 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
             throw new Error('卖出面板元素不存在, 请确认页面是否正确');
           }
           sellPanel.click();
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 500));
+          sellPanel.click();
+          await new Promise(resolve => setTimeout(resolve, 500));
           // 关闭反向订单
           const btn = document.querySelector('.order-5 .bn-checkbox') as HTMLButtonElement;
           if (!btn) throw new Error('操作卖出补救反向订单按钮不存在, 请确认页面是否正确');
@@ -317,32 +324,32 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
           // 设置卖出价格
           const limitPrice = document.querySelector('input#limitPrice') as any;
           if (!limitPrice) throw new Error('成交价格元素不存在, 请确认页面是否正确');
-          const lastValue1 = limitPrice.value;
           limitPrice.value = price;
           const tracker2 = limitPrice._valueTracker;
           if (tracker2) {
-            tracker2.setValue(lastValue1);
+            tracker2.setValue(limitPrice.value);
           }
           limitPrice.dispatchEvent(new Event('input', { bubbles: true }));
           limitPrice.dispatchEvent(new Event('change', { bubbles: true }));
-
           // 设置金额
           const sider = document.querySelector('.order-5 input[type="range"]') as any;
           if (!sider) throw new Error('补救卖出面板滑块不存在, 请确认页面是否正确');
-          const lastValue = sider.value;
           sider.value = '100';
           const tracker1 = sider._valueTracker;
           if (tracker1) {
-            tracker1.setValue(lastValue);
+            tracker1.setValue(sider.value);
           }
           sider.dispatchEvent(new Event('input', { bubbles: true }));
           sider.dispatchEvent(new Event('change', { bubbles: true }));
-
+          await new Promise(resolve => setTimeout(resolve, 16));
+          if (sider.value < 1) {
+            throw new Error('金额设置异常，请检查页面是否正确');
+          }
           // 确认卖出
           const submitBtn = document.querySelector('.order-5 button') as HTMLButtonElement;
           if (!submitBtn) throw new Error('补救卖出面板提交按钮不存在, 请确认页面是否正确');
           submitBtn.click();
-          await new Promise(resolve => setTimeout(resolve, 300));
+          await new Promise(resolve => setTimeout(resolve, 1500));
           // 校验卖出
           let count = 0;
           // 1000 / 30 每秒30fps 最多等待1秒
@@ -357,11 +364,9 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
             }
             count++;
           }
-          // 等待{timeout}秒后再次检测
-          await new Promise(resolve => setTimeout(resolve, timeout));
-          // 校验是否还有可用余额
+          await new Promise(resolve => setTimeout(resolve, 1500));
           // 再次校验是否还有卖出订单
-          sell = document.querySelector('td div[style="color: var(--color-Sell);"]');
+          sell = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Sell);"]');
           if (!sell) {
             // 回到买入面板
             const buyPanel = document.querySelector(
@@ -429,4 +434,252 @@ export const checkWaterfall = async (tab: chrome.tabs.Tab) => {
     throw new Error(result.error);
   }
   return result;
+};
+
+// 跳转下单 卖出
+export const goToSell = async (tab: chrome.tabs.Tab, reverse: boolean = false): Promise<string> => {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id! },
+    args: [reverse],
+    func: async reverse => {
+      try {
+        const sellPanel = document.querySelector(
+          '.bn-tab__buySell[aria-controls="bn-tab-pane-1"]',
+        ) as HTMLButtonElement;
+        if (!sellPanel) {
+          throw new Error('卖出面板元素不存在, 请确认页面是否正确');
+        }
+        sellPanel.click();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        sellPanel.click();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const priceEl = document.querySelector(
+          `.ReactVirtualized__List [style*="--color-${reverse ? 'Sell' : 'Buy'}"]`,
+        ) as HTMLSpanElement;
+        if (!priceEl) throw new Error('价格元素不存在, 请确认页面是否正确');
+        const sellPrice = priceEl.textContent.trim();
+        // 设置卖出价格
+        const limitPrice = document.querySelector('input#limitPrice') as any;
+        if (!limitPrice) throw new Error('成交价格元素不存在, 请确认页面是否正确');
+        limitPrice.value = sellPrice;
+        const tracker2 = limitPrice._valueTracker;
+        if (tracker2) {
+          tracker2.setValue(limitPrice.value);
+        }
+        limitPrice.dispatchEvent(new Event('input', { bubbles: true }));
+        limitPrice.dispatchEvent(new Event('change', { bubbles: true }));
+        // 设置金额
+        const sider = document.querySelector('.order-5 input[type="range"]') as any;
+        if (!sider) throw new Error('卖出面板滑块不存在, 请确认页面是否正确');
+        sider.value = '100';
+        const tracker1 = sider._valueTracker;
+        if (tracker1) {
+          tracker1.setValue(sider.value);
+        }
+        sider.dispatchEvent(new Event('input', { bubbles: true }));
+        sider.dispatchEvent(new Event('change', { bubbles: true }));
+        await new Promise(resolve => setTimeout(resolve, 16));
+        if (sider.value < 10) {
+          throw new Error('金额设置异常，请检查页面是否正确');
+        }
+        // 执行卖出
+        const submitBtn = document.querySelector('.order-5 button') as HTMLButtonElement;
+        if (!submitBtn) throw new Error('卖出面板提交按钮不存在, 请确认页面是否正确');
+        submitBtn.click();
+        // 校验卖出
+        let count = 0;
+        // 1000 / 30 每秒30fps 最多等待1秒
+        while (count < 32) {
+          await new Promise(resolve => setTimeout(resolve, 1000 / 30));
+          const btn = document
+            .querySelector(`div[role='dialog'][class='bn-modal-wrap data-size-small']`)
+            ?.querySelector('.bn-button__primary') as HTMLButtonElement;
+          if (btn) {
+            btn.click();
+            break;
+          }
+          count++;
+        }
+        return { error: '', val: sellPrice };
+      } catch (error) {
+        return { error: String(error) };
+      }
+    },
+  });
+  const [{ result }] = results;
+  if (result?.error) {
+    throw new Error(result.error);
+  }
+  if (result?.val) {
+    return result.val;
+  }
+  return '';
+};
+
+// 校验订单 下单模式
+export const checkByOrderBuy = async (tab: chrome.tabs.Tab, timeout: number = 3) => {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id! },
+    args: [timeout],
+    func: async timeout => {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const order = document.querySelector('div[id="bn-tab-orderOrder"]') as HTMLButtonElement;
+        if (!order) throw new Error('订单元素不存在, 请确认页面是否正确');
+        const limit = document.querySelector('div[id="bn-tab-limit"]') as HTMLButtonElement;
+        if (!limit) throw new Error('限价元素不存在, 请确认页面是否正确');
+        let count = 0;
+        while (true) {
+          const buy = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Buy);"]');
+          if (!buy) break;
+          await new Promise(resolve => setTimeout(resolve, 1000 / 30));
+          count++;
+          // 大约 33 * timeout = timeout s 后超时
+          if (count > 33 * timeout) {
+            console.error('订单超时，请检查页面是否正确');
+            break;
+          }
+        }
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        // 取消买入订单
+        const buy = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Buy);"]');
+        console.log('buy???', buy);
+        if (buy) {
+          const evt = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          });
+          const svg = buy.parentNode!.parentNode!.querySelector('svg');
+          if (svg) {
+            svg.dispatchEvent(evt);
+          } else {
+            throw new Error('买入订单取消失败，请检查页面是否正确');
+          }
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          throw new Error('买入订单超时，请检查页面是否正确');
+        }
+        return { error: '' };
+      } catch (err) {
+        return { error: String(err) };
+      }
+    },
+  });
+
+  const [{ result }] = results;
+  if (result?.error) {
+    throw new Error(result.error);
+  }
+  return result;
+};
+
+export const checkByOrderSell = async (tab: chrome.tabs.Tab, timeout: number = 3) => {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id! },
+    args: [timeout],
+    func: async timeout => {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        let count = 0;
+        while (true) {
+          const sell = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Sell);"]');
+          if (!sell) break;
+          await new Promise(resolve => setTimeout(resolve, 1000 / 30));
+          count++;
+          // 大约 33 * timeout = timeout s 后超时
+          if (count > 33 * timeout) {
+            console.error(`订单超时 ${count + 1}次`);
+            break;
+          }
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // 没有卖出 取消
+        const sell = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Sell);"]');
+        if (sell) {
+          const evt = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          });
+          const svg = sell.parentNode!.parentNode!.querySelector('svg');
+          if (svg) {
+            svg.dispatchEvent(evt);
+          } else {
+            throw new Error('卖出订单取消失败，请检查页面是否正确');
+          }
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          throw new Error('卖出订单超时，请检查页面是否正确');
+        }
+        return { error: '' };
+      } catch (error) {
+        return { error: String(error) };
+      }
+    },
+  });
+
+  const [{ result }] = results;
+  if (result?.error) {
+    throw new Error(result.error);
+  }
+  return result;
+};
+
+export const getIsSell = async (tab: chrome.tabs.Tab) => {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id! },
+    func: async () => {
+      try {
+        const sellPanel = document.querySelector(
+          '.bn-tab__buySell[aria-controls="bn-tab-pane-1"]',
+        ) as HTMLButtonElement;
+        if (!sellPanel) {
+          throw new Error('卖出面板元素不存在, 请确认页面是否正确');
+        }
+        sellPanel.click();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        sellPanel.click();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const priceEl = document.querySelector(`.ReactVirtualized__List [style*="--color-Sell"]`) as HTMLSpanElement;
+        if (!priceEl) throw new Error('价格元素不存在, 请确认页面是否正确');
+        const sellPrice = priceEl.textContent.trim();
+        // 设置卖出价格
+        const limitPrice = document.querySelector('input#limitPrice') as any;
+        if (!limitPrice) throw new Error('成交价格元素不存在, 请确认页面是否正确');
+        limitPrice.value = sellPrice;
+        const tracker2 = limitPrice._valueTracker;
+        if (tracker2) {
+          tracker2.setValue(limitPrice.value);
+        }
+        limitPrice.dispatchEvent(new Event('input', { bubbles: true }));
+        limitPrice.dispatchEvent(new Event('change', { bubbles: true }));
+        // 设置金额
+        const sider = document.querySelector('.order-5 input[type="range"]') as any;
+        if (!sider) throw new Error('卖出面板滑块不存在, 请确认页面是否正确');
+        sider.value = '100';
+        const tracker1 = sider._valueTracker;
+        if (tracker1) {
+          tracker1.setValue(sider.value);
+        }
+        sider.dispatchEvent(new Event('input', { bubbles: true }));
+        sider.dispatchEvent(new Event('change', { bubbles: true }));
+        await new Promise(resolve => setTimeout(resolve, 16));
+        if (sider.value >= 10) {
+          return { error: '', val: true };
+        }
+        return { error: '', val: false };
+      } catch (error) {
+        return { error: String(error) };
+      }
+    },
+  });
+  const [{ result }] = results;
+  if (result?.error) {
+    throw new Error(result.error);
+  }
+  if (result?.val) {
+    return result.val;
+  }
+  return false;
 };

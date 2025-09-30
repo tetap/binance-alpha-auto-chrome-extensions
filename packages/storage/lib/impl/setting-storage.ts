@@ -36,7 +36,7 @@ const storage = createStorage<SettingState>(
     dot: '3',
     type: 'Buy',
     mode: 'Reverse',
-    timeoutCount: '2',
+    timeoutCount: '3',
     orderAmountMode: 'Fixed',
     maxAmount: '100',
     minAmount: '50',
