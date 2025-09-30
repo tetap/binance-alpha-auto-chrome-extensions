@@ -12,11 +12,20 @@ import {
   checkWaterfall,
 } from './tool';
 import { useLogger } from './useLogger';
-import { withErrorBoundary, withSuspense } from '@extension/shared';
+import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
+import { todayDealStorage } from '@extension/storage';
 import { Button, cn, ErrorDisplay, Input, Label, LoadingSpinner, RadioGroup, RadioGroupItem } from '@extension/ui';
+import dayjs from 'dayjs';
 import { useLayoutEffect, useMemo, useState } from 'react';
 
 const Popup = () => {
+  const deal = useStorage(todayDealStorage);
+
+  const todayDeal = useMemo(() => {
+    const day = dayjs().format('YYYY-MM-DD');
+    return deal[day] ?? '0';
+  }, [deal]);
+
   const [runing, setRuning] = useState(false);
   // 开始余额
   const [startBalance, setStartBalance] = useState('');
@@ -162,6 +171,10 @@ const Popup = () => {
 
         setCurrentBalance(lastBalance);
 
+        const day = dayjs().format('YYYY-MM-DD');
+
+        todayDealStorage.setVal(day, data.amount);
+
         appendLog(`下单成功: ${data.amount}(USDT) 下单价格: ${lastPrice} 反向价格: ${truncated}`, 'success');
 
         errorCount = 0;
@@ -299,8 +312,13 @@ const Popup = () => {
         </div>
         {render}
 
-        <div className="flex flex-none items-center justify-end text-xs">
-          操作损耗:<b className={cn('ml-2 text-sm', op > 0 ? 'text-green-500' : 'text-red-500')}> {op}</b>
+        <div className="flex flex-none items-center justify-between text-xs">
+          <div>
+            当日交易额:<b className={cn('ml-2 text-sm text-green-500')}> {todayDeal}</b>
+          </div>
+          <div>
+            操作损耗:<b className={cn('ml-2 text-sm', op > 0 ? 'text-green-500' : 'text-red-500')}> {op}</b>
+          </div>
         </div>
       </div>
     </div>

@@ -273,18 +273,101 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
           throw new Error('买入订单超时，请检查页面是否正确');
         }
         // TODO：如果是卖出订单 赶紧操作补救重新出售
-        // const sell = document.querySelector('td div[style="color: var(--color-Sell);"]');
-        // if (sell) {
-        //   const evt = new MouseEvent('click', {
-        //     bubbles: true,
-        //     cancelable: true,
-        //     view: window,
-        //   });
-        //   const svg = sell.parentNode!.parentNode!.querySelector('svg');
-        //   if (svg) {
-        //     svg.dispatchEvent(evt);
-        //   }
-        // }
+        let sell = document.querySelector('td div[style="color: var(--color-Sell);"]');
+        while (sell) {
+          const evt = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          });
+          // 取消卖出订单
+          const svg = sell.parentNode!.parentNode!.querySelector('svg');
+          if (svg) {
+            svg.dispatchEvent(evt);
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          // 跳转卖出面板
+          const sellPanel = document.querySelector(
+            '.bn-tab__buySell[aria-controls="bn-tab-pane-1"]',
+          ) as HTMLButtonElement;
+          if (!sellPanel) {
+            throw new Error('卖出面板元素不存在, 请确认页面是否正确');
+          }
+          sellPanel.click();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          // 关闭反向订单
+          const btn = document.querySelector('.order-5 .bn-checkbox') as HTMLButtonElement;
+          if (!btn) throw new Error('操作卖出补救反向订单按钮不存在, 请确认页面是否正确');
+          // 获取aria-checked是否是true
+          const isChecked = btn.getAttribute('aria-checked') === 'true';
+          // 点击反向按钮
+          if (isChecked) {
+            btn.click();
+          }
+          // 设置金额
+          const sider = document.querySelector('.order-5 input[type="range"]') as any;
+          if (!sider) throw new Error('补救卖出面板滑块不存在, 请确认页面是否正确');
+          const lastValue = sider.value;
+          sider.value = '100';
+          const tracker1 = sider._valueTracker;
+          if (tracker1) {
+            tracker1.setValue(lastValue);
+          }
+          sider.dispatchEvent(new Event('input', { bubbles: true }));
+          sider.dispatchEvent(new Event('change', { bubbles: true }));
+
+          // 获取卖出价格
+          const priceEl = document.querySelector(`.ReactVirtualized__List [style*="--color-Sell"]`) as HTMLSpanElement;
+          if (!priceEl) throw new Error('价格元素不存在, 请确认页面是否正确');
+          const price = priceEl.textContent.trim();
+
+          // 设置卖出价格
+          const limitPrice = document.querySelector('input#limitPrice') as any;
+          if (!limitPrice) throw new Error('成交价格元素不存在, 请确认页面是否正确');
+          const lastValue1 = limitPrice.value;
+          limitPrice.value = price;
+          const tracker2 = limitPrice._valueTracker;
+          if (tracker2) {
+            tracker2.setValue(lastValue1);
+          }
+          limitPrice.dispatchEvent(new Event('input', { bubbles: true }));
+          limitPrice.dispatchEvent(new Event('change', { bubbles: true }));
+
+          // 确认卖出
+          const submitBtn = document.querySelector('.order-5 button') as HTMLButtonElement;
+          if (!submitBtn) throw new Error('补救卖出面板提交按钮不存在, 请确认页面是否正确');
+          submitBtn.click();
+          await new Promise(resolve => setTimeout(resolve, 300));
+          // 校验卖出
+          let count = 0;
+          // 1000 / 30 每秒30fps 最多等待1秒
+          while (count < 32) {
+            await new Promise(resolve => setTimeout(resolve, 1000 / 30));
+            const btn = document
+              .querySelector(`div[role='dialog'][class='bn-modal-wrap data-size-small']`)
+              ?.querySelector('.bn-button__primary') as HTMLButtonElement;
+            if (btn) {
+              btn.click();
+              break;
+            }
+            count++;
+          }
+          // 等待3秒后再次检测
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          // 再次校验是否还有卖出订单
+          sell = document.querySelector('td div[style="color: var(--color-Sell);"]');
+          if (!sell) {
+            // 回到买入面板
+            const buyPanel = document.querySelector(
+              '.bn-tab__buySell[aria-controls="bn-tab-pane-0"]',
+            ) as HTMLButtonElement;
+            if (!buyPanel) {
+              throw new Error('买入面板元素不存在, 请确认页面是否正确');
+            }
+            buyPanel.click();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
         return { error: '' };
       } catch (err) {
         return { error: String(err) };
