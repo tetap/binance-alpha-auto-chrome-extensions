@@ -28,7 +28,7 @@
 ### 使用release版本
 
 1. **访问 Releases 页面**  
-   打开你的仓库 GitHub Releases 页面：[https://github.com/你的用户名/你的仓库/releases](https://github.com/你的用户名/你的仓库/releases)
+   打开你的仓库 GitHub Releases 页面：[https://github.com/tetap/binance-alpha-auto-chrome-extensions/releases](https://github.com/tetap/binance-alpha-auto-chrome-extensions/releases)
 
 2. **下载最新版本**  
    - 在最新 Release 下找到 `extension.zip` 文件。  
@@ -108,6 +108,9 @@ pnpm build
     <img alt="Logo" src="./docs/sell.png" />
 </picture>
 
+## 更新日志可查看
+
+[CHANGELOG.md](https://github.com/tetap/binance-alpha-auto-chrome-extensions/blob/main/CHANGELOG.md)
 
 ## 进群交流
 
