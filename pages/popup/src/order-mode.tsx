@@ -39,6 +39,8 @@ export const OrderMode = ({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    alert('开发中');
+    return;
     if (runing) return;
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
