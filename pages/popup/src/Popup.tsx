@@ -51,73 +51,83 @@ const Popup = () => {
   }, []);
 
   return (
-    <div className={cn('bg-slate-50', 'App flex gap-4 p-4')}>
-      <div className="w-1/2">
-        <div className="bg-background mb-4 flex flex-col gap-2 rounded-md p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="w-1/2 text-xs">
-              开始余额: <b className="text-sm">{startBalance}</b>
+    <div className={cn('bg-slate-50', 'App flex flex-col p-4 pb-0')}>
+      <div className="flex min-h-0 flex-1 gap-4">
+        <div className="w-1/2">
+          <div className="bg-background mb-4 flex flex-col gap-2 rounded-md p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="w-1/2 text-xs">
+                开始余额: <b className="text-sm">{startBalance}</b>
+              </div>
+              <div className="w-1/2 text-xs">
+                当前余额: <b className="text-sm">{currentBalance}</b>
+              </div>
             </div>
-            <div className="w-1/2 text-xs">
-              当前余额: <b className="text-sm">{currentBalance}</b>
+          </div>
+
+          <div className={cn(runing ? 'cursor-not-allowed' : '')}>
+            <div className={cn(runing ? 'pointer-events-none' : '')}>
+              <Tabs
+                defaultValue={setting.mode ?? 'Reverse'}
+                className="w-full"
+                onValueChange={value => settingStorage.setVal({ mode: value as 'Reverse' | 'Order' })}>
+                <TabsList>
+                  <TabsTrigger value="Reverse">反向订单</TabsTrigger>
+                  <TabsTrigger value="Order">手动卖出</TabsTrigger>
+                </TabsList>
+                <TabsContent value="Reverse">
+                  <ReverseMode
+                    setCurrentBalance={setCurrentBalance}
+                    setRuning={setRuning}
+                    setStartBalance={setStartBalance}
+                    startBalance={startBalance}
+                    runing={runing}
+                    appendLog={appendLog}
+                    setNum={setNum}
+                  />
+                </TabsContent>
+                <TabsContent value="Order">
+                  <OrderMode
+                    setCurrentBalance={setCurrentBalance}
+                    setRuning={setRuning}
+                    setStartBalance={setStartBalance}
+                    startBalance={startBalance}
+                    runing={runing}
+                    appendLog={appendLog}
+                    setNum={setNum}
+                  />
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         </div>
 
-        <div className={cn(runing ? 'cursor-not-allowed' : '')}>
-          <div className={cn(runing ? 'pointer-events-none' : '')}>
-            <Tabs
-              defaultValue={setting.mode ?? 'Reverse'}
-              className="w-full"
-              onValueChange={value => settingStorage.setVal({ mode: value as 'Reverse' | 'Order' })}>
-              <TabsList>
-                <TabsTrigger value="Reverse">反向订单</TabsTrigger>
-                <TabsTrigger value="Order">手动卖出</TabsTrigger>
-              </TabsList>
-              <TabsContent value="Reverse">
-                <ReverseMode
-                  setCurrentBalance={setCurrentBalance}
-                  setRuning={setRuning}
-                  setStartBalance={setStartBalance}
-                  startBalance={startBalance}
-                  runing={runing}
-                  appendLog={appendLog}
-                  setNum={setNum}
-                />
-              </TabsContent>
-              <TabsContent value="Order">
-                <OrderMode
-                  setCurrentBalance={setCurrentBalance}
-                  setRuning={setRuning}
-                  setStartBalance={setStartBalance}
-                  startBalance={startBalance}
-                  runing={runing}
-                  appendLog={appendLog}
-                  setNum={setNum}
-                />
-              </TabsContent>
-            </Tabs>
+        <div className="flex w-1/2 flex-col gap-2">
+          <div className="flex flex-none items-center justify-between text-sm font-bold">
+            <div>日志输出</div>
+            <Button variant={'outline'} onClick={clearLogger}>
+              清空日志
+            </Button>
+          </div>
+          {render}
+
+          <div className="flex flex-none items-center justify-between text-xs">
+            <div>
+              当日交易额:<b className={cn('ml-2 text-sm text-green-500')}> {todayDeal}</b>
+            </div>
+            <div>
+              操作损耗:<b className={cn('ml-2 text-sm', op > 0 ? 'text-green-500' : 'text-red-500')}> {op}</b>
+            </div>
           </div>
         </div>
       </div>
-
-      <div className="flex w-1/2 flex-col gap-2">
-        <div className="flex flex-none items-center justify-between text-sm font-bold">
-          <div>日志输出</div>
-          <Button variant={'outline'} onClick={clearLogger}>
-            清空日志
-          </Button>
-        </div>
-        {render}
-
-        <div className="flex flex-none items-center justify-between text-xs">
-          <div>
-            当日交易额:<b className={cn('ml-2 text-sm text-green-500')}> {todayDeal}</b>
-          </div>
-          <div>
-            操作损耗:<b className={cn('ml-2 text-sm', op > 0 ? 'text-green-500' : 'text-red-500')}> {op}</b>
-          </div>
-        </div>
+      <div className="flex h-8 flex-none items-center justify-center">
+        <a
+          target="_blank"
+          href="https://github.com/tetap/binance-alpha-auto-chrome-extensions"
+          className="text-purple-600 hover:text-purple-800">
+          By: Tetap&nbsp;Github
+        </a>
       </div>
     </div>
   );

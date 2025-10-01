@@ -265,6 +265,11 @@ export const ReverseMode = ({
       } catch (error: unknown) {
         if (error instanceof Error) {
           appendLog(error.message, 'error');
+          console.log('has message', error.message, error.message.includes('刷新页面'));
+          if (error.message.includes('刷新页面')) {
+            const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+            if (tab.id) chrome.tabs.reload(tab.id);
+          }
         }
         console.error(error);
         if (errorCount > 10) {
@@ -275,6 +280,13 @@ export const ReverseMode = ({
           await new Promise(resolve => setTimeout(resolve, 6000));
 
           errorCount = 0;
+        }
+        // 每操作20次刷新一下页面
+        if (i % 20 === 0) {
+          const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+          if (tab.id) chrome.tabs.reload(tab.id);
+          appendLog(`错误防抖刷新页面等待6s`, 'info');
+          await new Promise(resolve => setTimeout(resolve, 6000));
         }
         errorCount++;
         i--;

@@ -125,7 +125,7 @@ export const triggerBuy = async (tab: chrome.tabs.Tab) => {
           '.order-5 button[class="bn-button bn-button__buy data-size-middle w-full"]',
         ) as HTMLButtonElement;
         if (!btn) {
-          throw new Error('买入按钮不存在, 请确认页面是否正确');
+          throw new Error('买入按钮不存在, 刷新页面, 请确认页面是否正确');
         }
         btn.click();
         return { error: '' };
@@ -300,7 +300,7 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
             '.bn-tab__buySell[aria-controls="bn-tab-pane-1"]',
           ) as HTMLButtonElement;
           if (!sellPanel) {
-            throw new Error('卖出面板元素不存在, 请确认页面是否正确');
+            throw new Error('卖出面板元素不存在, 刷新页面, 请确认页面是否正确');
           }
           sellPanel.click();
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -308,7 +308,7 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
           await new Promise(resolve => setTimeout(resolve, 500));
           // 关闭反向订单
           const btn = document.querySelector('.order-5 .bn-checkbox') as HTMLButtonElement;
-          if (!btn) throw new Error('操作卖出补救反向订单按钮不存在, 请确认页面是否正确');
+          if (!btn) throw new Error('操作卖出补救反向订单按钮不存在, 刷新页面, 请确认页面是否正确');
           // 获取aria-checked是否是true
           const isChecked = btn.getAttribute('aria-checked') === 'true';
           // 点击反向按钮
@@ -699,6 +699,41 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
         }
         if (sider.value >= 10) {
           return { error: '', val: true };
+        }
+        return { error: '', val: false };
+      } catch (error) {
+        return { error: String(error) };
+      }
+    },
+  });
+  const [{ result }] = results;
+  if (result?.error) {
+    throw new Error(result.error);
+  }
+  if (result?.val) {
+    return result.val;
+  }
+  return false;
+};
+
+export const checkAmount = async (tab: chrome.tabs.Tab) => {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id! },
+    func: async () => {
+      try {
+        const sellPanel = document.querySelector(
+          '.bn-tab__buySell[aria-controls="bn-tab-pane-1"]',
+        ) as HTMLButtonElement;
+        if (!sellPanel) {
+          throw new Error('卖出面板元素不存在, 请确认页面是否正确');
+        }
+        sellPanel.click();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        sellPanel.click();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const hasError = document.querySelector('.order-5 .text-Error');
+        if (hasError && hasError.textContent === '超过可用余额') {
+          return { error: '超过可用余额, 刷新页面，请检查页面是否正确', val: true };
         }
         return { error: '', val: false };
       } catch (error) {

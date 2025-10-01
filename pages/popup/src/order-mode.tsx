@@ -11,6 +11,7 @@ import {
   checkByOrderSell,
   getIsSell,
   checkWaterfall,
+  checkAmount,
 } from './tool';
 import { useStorage } from '@extension/shared';
 import { orderSettingStorage, todayDealStorage } from '@extension/storage';
@@ -210,6 +211,9 @@ export const OrderMode = ({
         // 操作确认买入
         await triggerBuy(tab);
 
+        // 判断是否出现 超过可用余额 有可能是页面刷新不够快
+        await checkAmount(tab);
+
         appendLog(`操作买入待确认`, 'info');
 
         // 检查弹窗并确认
@@ -287,10 +291,11 @@ export const OrderMode = ({
         console.error(error);
         if (error instanceof Error) {
           appendLog(error.message, 'error');
-          if (error.message.includes('设置异常')) {
+          if (error.message.includes('设置异常') || error.message.includes('刷新页面')) {
             const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
             if (tab.id) await chrome.tabs.reload(tab.id);
             errorCount = 0;
+            await new Promise(resolve => setTimeout(resolve, 3000));
           }
         }
         if (errorCount > 10) {
