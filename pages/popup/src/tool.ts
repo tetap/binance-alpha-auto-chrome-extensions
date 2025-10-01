@@ -67,7 +67,7 @@ export const getBalance = async (tab: chrome.tabs.Tab) => {
         buyPanel.click();
         await new Promise(resolve => setTimeout(resolve, 1000));
         const UsdtEle = document.querySelector(
-          "div[class='text-PrimaryText text-[12px] leading-[18px] font-[500]']",
+          ".order-5 .t-caption1 div[class~='text-PrimaryText']",
         ) as HTMLSpanElement;
         if (!UsdtEle) throw new Error('获取不到余额, 请确认页面是否正确');
         // 返回余额（字符串）
