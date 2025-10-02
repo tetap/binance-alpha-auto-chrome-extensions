@@ -110,12 +110,10 @@ export const OrderMode = ({
     setRuning(true);
     const runNum = data.runNum ? Number(data.runNum) : 1;
     let errorCount = 0;
+    const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
     for (let i = 0; i < runNum; i++) {
       try {
         appendLog(`当前轮次: ${i + 1}`, 'info');
-
-        const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
-
         // 校验是否有需要卖出
         appendLog(`校验是否有需要卖出`, 'info');
         const isSell = await getIsSell(tab);
@@ -153,37 +151,29 @@ export const OrderMode = ({
         let flow = 0;
         // 获取一个买入价格
         let lastPrice = '';
-        let fistBuyPrice = '';
-        let index = 0;
 
         // 校验是否大瀑布
         await checkWaterfall(tab);
+
+        const prices = [];
 
         while (flow < count) {
           const buyPrice = await getPrice(tab, data.type);
           if (!buyPrice) throw new Error('获取价格失败');
           appendLog(`获取到下单价格: ${buyPrice}`, 'info');
+          prices.push(parseFloat(buyPrice));
           if (lastPrice === buyPrice || !lastPrice) {
             // 价格相同，添加计数
             flow++;
           } else {
             flow = 0;
           }
-          if (!fistBuyPrice) {
-            fistBuyPrice = buyPrice;
-          }
           lastPrice = buyPrice;
-          index++;
-          if (index > count * 1.5) {
-            throw new Error('价格波动较大，跳过交易，开启下一轮');
-          }
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
-        if (lastPrice > fistBuyPrice) {
-          lastPrice = fistBuyPrice;
-          // throw new Error('价格波动较大，跳过交易，开启下一轮');
-        }
+        // 拿到最低价格
+        lastPrice = Math.min(...prices).toString();
 
         appendLog(`设置下单价格: ${lastPrice}`, 'info');
 
@@ -340,6 +330,25 @@ export const OrderMode = ({
 
       appendLog(`当前轮次结束，等待1s 继续`, 'info');
       await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    appendLog(`全部轮次结束 检测是否有卖出`, 'info');
+
+    const isSell = await getIsSell(tab);
+    let sum = 0;
+    let isSuccess = false;
+    while (isSell) {
+      await goToSell(tab, true);
+      const check = await checkByOrderSell(tab, Number(data.timeout)).catch(err => {
+        appendLog(`卖出超时${sum + 1}次: ${err.message}`, 'error');
+        sum++;
+        isSuccess = false;
+        return { error: err.message };
+      });
+      isSuccess = check?.error ? false : true;
+      if (isSuccess) {
+        break;
+      }
     }
 
     appendLog(`停止`, 'info');
