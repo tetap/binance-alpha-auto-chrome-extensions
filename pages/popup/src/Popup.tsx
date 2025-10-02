@@ -33,7 +33,12 @@ const Popup = () => {
   const { render, appendLog, clearLogger } = useLogger();
 
   // 流水
-  const op = useMemo(() => Number(currentBalance) - Number(startBalance), [currentBalance, startBalance]);
+  const op = useMemo(() => {
+    const b1 = currentBalance.replace(/,/g, '');
+    const b2 = startBalance.replace(/,/g, '');
+    console.log(b1, b2);
+    return Number(b1) - Number(b2);
+  }, [currentBalance, startBalance]);
 
   useLayoutEffect(() => {
     (async (setStartBalance, setCurrentBalance, appendLog) => {
