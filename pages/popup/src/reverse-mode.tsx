@@ -17,8 +17,11 @@ import {
 import { useStorage } from '@extension/shared';
 import { settingStorage, todayDealStorage } from '@extension/storage';
 import { Button, cn, Input, Label, RadioGroup, RadioGroupItem } from '@extension/ui';
-import dayjs from 'dayjs';
+import dayjs, { extend } from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { floor } from 'lodash-es';
+
+extend(utc);
 
 export interface IRerverseModeProps {
   setCurrentBalance: (balance: string) => void;
@@ -253,7 +256,7 @@ export const ReverseMode = ({
 
         setCurrentBalance(lastBalance);
 
-        const day = dayjs().format('YYYY-MM-DD');
+        const day = dayjs().utc().format('YYYY-MM-DD');
 
         todayDealStorage.setVal(day, amount);
 

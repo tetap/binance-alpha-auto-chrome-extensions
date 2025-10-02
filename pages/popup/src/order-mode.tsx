@@ -11,13 +11,16 @@ import {
   checkByOrderSell,
   getIsSell,
   checkWaterfall,
-  checkAmount,
+  checkUnknownModal,
 } from './tool';
 import { useStorage } from '@extension/shared';
 import { orderSettingStorage, todayDealStorage } from '@extension/storage';
 import { Button, cn, Input, Label, RadioGroup, RadioGroupItem } from '@extension/ui';
-import dayjs from 'dayjs';
+import dayjs, { extend } from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { floor } from 'lodash-es';
+
+extend(utc);
 
 export interface IOrderModeProps {
   setCurrentBalance: (balance: string) => void;
@@ -132,6 +135,9 @@ export const OrderMode = ({
           }
         }
 
+        // 校验未知弹窗风险
+        await checkUnknownModal(tab);
+
         const balance = await getBalance(tab);
 
         if (!balance) return console.error('获取余额失败');
@@ -148,6 +154,7 @@ export const OrderMode = ({
         // 获取一个买入价格
         let lastPrice = '';
         let fistBuyPrice = '';
+        let index = 0;
 
         // 校验是否大瀑布
         await checkWaterfall(tab);
@@ -166,11 +173,16 @@ export const OrderMode = ({
             fistBuyPrice = buyPrice;
           }
           lastPrice = buyPrice;
-          await new Promise(resolve => setTimeout(resolve, 500));
+          index++;
+          if (index > count * 1.5) {
+            throw new Error('价格波动较大，跳过交易，开启下一轮');
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
-        if (lastPrice !== fistBuyPrice) {
-          throw new Error('价格波动较大，跳过交易，开启下一轮');
+        if (lastPrice > fistBuyPrice) {
+          lastPrice = fistBuyPrice;
+          // throw new Error('价格波动较大，跳过交易，开启下一轮');
         }
 
         appendLog(`设置下单价格: ${lastPrice}`, 'info');
@@ -180,6 +192,15 @@ export const OrderMode = ({
 
         // 设置价格
         await setPrice(tab, lastPrice);
+
+        // 获取最近一个相反的价格
+        const sellPrice = await getPrice(tab, data.type === 'Buy' ? 'Sell' : 'Buy');
+        // 计算百分比
+        const percent = 1 - Number(sellPrice) / Number(lastPrice);
+        // 如果相反价格超过0.01则不买入
+        if (percent > 0.01) {
+          throw new Error('价格波动较大，跳过交易，开启下一轮');
+        }
 
         const amount =
           data.orderAmountMode === 'Fixed'
@@ -196,25 +217,29 @@ export const OrderMode = ({
 
         appendLog(`执行瀑布检测`, 'info');
 
-        // 获取最近一个相反的价格
-        const sellPrice = await getPrice(tab, data.type === 'Buy' ? 'Sell' : 'Buy');
-        // 计算百分比
-        const percent = 1 - Number(sellPrice) / Number(lastPrice);
-        // 如果相反价格超过0.01则不买入
-        if (percent > 0.01) {
-          throw new Error('价格波动较大，跳过交易，开启下一轮');
-        }
-
         // 校验是否大瀑布
         await checkWaterfall(tab);
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const nextPrice = await getPrice(tab, data.type);
+
+        if (nextPrice < lastPrice) {
+          // appendLog(`最新价格(${nextPrice})比下单价格(${lastPrice})低，跳过交易，开启下一轮`, 'error');
+          throw new Error(`最新价格(${nextPrice})比下单价格(${lastPrice})低，跳过交易，开启下一轮`);
+          // lastPrice = nextPrice;
+        }
 
         // 操作确认买入
         await triggerBuy(tab);
 
         // 判断是否出现 超过可用余额 有可能是页面刷新不够快
-        await checkAmount(tab);
+        // await checkAmount(tab);
 
-        appendLog(`操作买入待确认`, 'info');
+        appendLog(`操作买入待确认 下单价格: ${lastPrice} 操作金额: ${amount}`, 'info');
+
+        // 校验是否大瀑布
+        await checkWaterfall(tab);
 
         // 检查弹窗并确认
         await checkBuy(tab);
@@ -266,6 +291,8 @@ export const OrderMode = ({
           }
         }
 
+        if (!submitPrice) throw new Error('获取卖出价格失败, 卖单失败！！！');
+
         // 等待1s
         await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -278,7 +305,7 @@ export const OrderMode = ({
 
         setCurrentBalance(lastBalance);
 
-        const day = dayjs().format('YYYY-MM-DD');
+        const day = dayjs().utc().format('YYYY-MM-DD');
 
         todayDealStorage.setVal(day, amount);
 
@@ -298,7 +325,7 @@ export const OrderMode = ({
             await new Promise(resolve => setTimeout(resolve, 3000));
           }
         }
-        if (errorCount > 10) {
+        if (errorCount > 5 || (i + 1) % 5 === 0) {
           // 刷新页面
           const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
           if (tab.id) await chrome.tabs.reload(tab.id);

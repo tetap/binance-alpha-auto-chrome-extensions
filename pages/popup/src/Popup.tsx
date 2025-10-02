@@ -6,8 +6,11 @@ import { useLogger } from './useLogger';
 import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
 import { settingStorage, todayDealStorage } from '@extension/storage';
 import { Button, cn, ErrorDisplay, LoadingSpinner, Tabs, TabsContent, TabsList, TabsTrigger } from '@extension/ui';
-import dayjs from 'dayjs';
+import dayjs, { extend } from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { useLayoutEffect, useMemo, useState } from 'react';
+
+extend(utc);
 
 const Popup = () => {
   const [num, setNum] = useState(0);
@@ -15,7 +18,7 @@ const Popup = () => {
   const deal = useStorage(todayDealStorage);
 
   const todayDeal = useMemo(() => {
-    const day = dayjs().format('YYYY-MM-DD');
+    const day = dayjs().utc().format('YYYY-MM-DD');
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     typeof num;
     return deal[day] ?? '0';

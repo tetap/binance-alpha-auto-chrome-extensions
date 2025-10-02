@@ -149,8 +149,8 @@ export const checkBuy = async (tab: chrome.tabs.Tab) => {
     func: async () => {
       try {
         let count = 0;
-        // 1000 / 30 每秒30fps 最多等待2秒
-        while (count < 64) {
+        // 1000 / 30 每秒30fps 最多等待3秒
+        while (count < 100) {
           await new Promise(resolve => setTimeout(resolve, 1000 / 30));
           const btn = document
             .querySelector(`div[role='dialog'][class='bn-modal-wrap data-size-small']`)
@@ -406,7 +406,61 @@ export const checkWaterfall = async (tab: chrome.tabs.Tab) => {
             ?.querySelectorAll('& > div') ?? [],
         ) as HTMLDivElement[];
         // 取出前面8条数据，如果存在3条以上红色价格连续则抛出异常
-        const slicing = elem.slice(0, 8);
+        const slicing = elem.slice(0, 10);
+
+        // let consecutiveSells = 0;
+        // let hasThreeConsecutiveSells = false;
+
+        // for (const e of slicing) {
+        //   const isSell = !!e.querySelector('div[style="color: var(--color-Sell);"]');
+        //   if (isSell) {
+        //     consecutiveSells++;
+        //     if (consecutiveSells >= 3) {
+        //       hasThreeConsecutiveSells = true;
+        //       break;
+        //     }
+        //   } else {
+        //     consecutiveSells = 0; // 重置计数
+        //   }
+        // }
+
+        // if (hasThreeConsecutiveSells) {
+        //   throw new Error('出现连续3个卖出价格，请检查页面是否正确');
+        // }
+
+        // 判断如果存在连续红线 并且价格是越来越低则抛出异常
+        let consecutivePrices: number[] = [];
+
+        for (const e of slicing) {
+          const isSell = !!e.querySelector('div[style="color: var(--color-Sell);"]');
+
+          if (isSell) {
+            const priceEl = e.querySelector('.flex-1.cursor-pointer');
+            const price = parseFloat(priceEl?.textContent?.trim() ?? '0');
+
+            // 添加到连续红线队列
+            consecutivePrices.push(price);
+
+            // 只保留最近 3 个
+            if (consecutivePrices.length > 3) {
+              consecutivePrices.shift();
+            }
+
+            // 如果连续满3个 并且严格递减 -> 抛异常
+            if (
+              consecutivePrices.length === 3 &&
+              consecutivePrices[0] > consecutivePrices[1] &&
+              consecutivePrices[1] > consecutivePrices[2]
+            ) {
+              throw new Error('出现连续3个递减的卖出价格，请检查页面是否正确');
+            }
+          } else {
+            // 遇到非红线就清空
+            consecutivePrices = [];
+          }
+        }
+
+        // 如果有连续的三个红色sell则抛出异常
         const sells = slicing.filter(e => e.querySelector('div[style="color: var(--color-Sell);"]')).slice(0, 3);
         if (sells.length < 3) {
           return { error: '' };
@@ -417,29 +471,12 @@ export const checkWaterfall = async (tab: chrome.tabs.Tab) => {
         });
         const maxPrice = Math.max(...prices);
         const minPrice = Math.min(...prices);
-
         const diffPercent = ((maxPrice - minPrice) / minPrice) * 100;
-
         if (diffPercent > 0.1) {
           return { error: '波动超过 0.1%' };
         } else {
           return { error: '' };
         }
-
-        // 判断所有价格区间内是否存在百分0.1以上的波动
-
-        // // flex-1 cursor-pointer 获取价格 如果全部一致则不算波动
-        // const prices = sells
-        //   .map(e => {
-        //     const priceEl = e.querySelector('.flex-1.cursor-pointer');
-        //     return priceEl?.textContent?.trim();
-        //   })
-        //   .filter(Boolean);
-        // const allSame = prices.every(p => p === prices[0]);
-        // if (!allSame) {
-        //   throw new Error('价格波动异常，放弃下单');
-        // }
-        return { error: '' };
       } catch (err) {
         return { error: String(err) };
       }
@@ -551,7 +588,7 @@ export const checkByOrderBuy = async (tab: chrome.tabs.Tab, timeout: number = 3)
     args: [timeout],
     func: async timeout => {
       try {
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 1100));
         const order = document.querySelector('div[id="bn-tab-orderOrder"]') as HTMLButtonElement;
         if (!order) throw new Error('订单元素不存在, 请确认页面是否正确');
         const limit = document.querySelector('div[id="bn-tab-limit"]') as HTMLButtonElement;
@@ -568,7 +605,7 @@ export const checkByOrderBuy = async (tab: chrome.tabs.Tab, timeout: number = 3)
             break;
           }
         }
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 1100));
         // 取消买入订单
         const buy = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Buy);"]');
         console.log('buy???', buy);
@@ -601,6 +638,7 @@ export const checkByOrderBuy = async (tab: chrome.tabs.Tab, timeout: number = 3)
   return result;
 };
 
+// #TODO 如果止损价格跌出0.1% 则取消订单加速卖出
 export const checkByOrderSell = async (tab: chrome.tabs.Tab, timeout: number = 3) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
@@ -749,4 +787,23 @@ export const checkAmount = async (tab: chrome.tabs.Tab) => {
     return result.val;
   }
   return false;
+};
+
+export const checkUnknownModal = async (tab: chrome.tabs.Tab) => {
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id! },
+    func: () => {
+      try {
+        const modal = document.querySelector(`div[role='dialog'][class='bn-modal-wrap data-size-small']`);
+        if (modal) throw new Error('未知弹窗，页面错误, 请确认页面是否正确');
+        return { error: '' };
+      } catch (error) {
+        return { error: String(error) };
+      }
+    },
+  });
+  const [{ result }] = results;
+  if (result?.error) {
+    throw new Error(result.error);
+  }
 };
