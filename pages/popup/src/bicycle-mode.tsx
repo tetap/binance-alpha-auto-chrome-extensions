@@ -463,7 +463,7 @@ export const BicycleMode = ({
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
         <Label htmlFor="checkPriceCount" className="w-28 flex-none">
-          检查金额间隔(秒)
+          检查金额次数
         </Label>
         <Input
           type="text"
