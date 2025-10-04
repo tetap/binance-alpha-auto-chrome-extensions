@@ -283,7 +283,9 @@ export const BicycleMode = ({
           // 校验卖出
           const check = await checkByOrderSell(tab, Number(data.timeout)).catch(err => {
             appendLog(`卖出超时${sum + 1}次: ${err.message}`, 'error');
-            sum++;
+            if (submitCount > 55) {
+              sum++;
+            }
             return { error: err.message };
           });
           isSuccess = check?.error ? false : true;
