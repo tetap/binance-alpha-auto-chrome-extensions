@@ -60,19 +60,27 @@ export const BicycleMode = ({
       orderAmountMode: 'Fixed' | 'Random';
       maxAmount: string;
       minAmount: string;
+      checkPriceTime: string;
+      checkPriceCount: string;
     };
 
     console.log(data);
 
     data.type = 'Buy';
 
-    if (!data.count || !data.type || !data.runNum || !data.timeout) {
+    if (!data.count || !data.type || !data.runNum || !data.timeout || !data.checkPriceCount || !data.checkPriceTime) {
       appendLog('参数不能为空', 'error');
       setRuning(false);
       return;
     }
     // 校验amount count dot runNum 是否为数字
-    if (isNaN(Number(data.count)) || isNaN(Number(data.runNum)) || isNaN(Number(data.timeout))) {
+    if (
+      isNaN(Number(data.count)) ||
+      isNaN(Number(data.runNum)) ||
+      isNaN(Number(data.timeout)) ||
+      isNaN(Number(data.checkPriceCount)) ||
+      isNaN(Number(data.checkPriceTime))
+    ) {
       appendLog('参数必须为数字', 'error');
       setRuning(false);
       return;
@@ -266,13 +274,13 @@ export const BicycleMode = ({
           // 前往卖出
           submitPrice = await goToSell(tab, false, lastPrice);
 
-          if (submitCount > 55) {
+          if (submitCount > Number(data.checkPriceCount)) {
             submitPrice = await goToSell(tab, false);
             appendLog(`卖出超时折损卖出`, 'error');
           } else {
             if (submitPrice === '-1') {
               appendLog(`当前价格比买入价低，等待${submitCount + 1}次`, 'error');
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              await new Promise(resolve => setTimeout(resolve, Number(data.checkPriceTime) * 1000));
               submitCount++;
               continue;
             }
@@ -283,7 +291,7 @@ export const BicycleMode = ({
           // 校验卖出
           const check = await checkByOrderSell(tab, Number(data.timeout)).catch(err => {
             appendLog(`卖出超时${sum + 1}次: ${err.message}`, 'error');
-            if (submitCount > 55) {
+            if (submitCount > Number(data.checkPriceCount)) {
               sum++;
             }
             return { error: err.message };
