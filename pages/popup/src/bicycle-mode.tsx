@@ -14,7 +14,7 @@ import {
   checkUnknownModal,
 } from './tool';
 import { useStorage } from '@extension/shared';
-import { orderSettingStorage, todayDealStorage } from '@extension/storage';
+import { bicycleSettingStorage, todayDealStorage } from '@extension/storage';
 import { Button, cn, Input, Label, RadioGroup, RadioGroupItem } from '@extension/ui';
 import dayjs, { extend } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -32,7 +32,7 @@ export interface IOrderModeProps {
   setNum: (num: number) => void;
 }
 
-export const OrderMode = ({
+export const BicycleMode = ({
   setCurrentBalance,
   setStartBalance,
   startBalance,
@@ -41,7 +41,7 @@ export const OrderMode = ({
   appendLog,
   setNum,
 }: IOrderModeProps) => {
-  const orderSetting = useStorage(orderSettingStorage);
+  const orderSetting = useStorage(bicycleSettingStorage);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -61,6 +61,10 @@ export const OrderMode = ({
       maxAmount: string;
       minAmount: string;
     };
+
+    console.log(data);
+
+    data.type = 'Buy';
 
     if (!data.count || !data.type || !data.runNum || !data.timeout) {
       appendLog('参数不能为空', 'error');
@@ -252,13 +256,27 @@ export const OrderMode = ({
 
         // await new Promise(resolve => setTimeout(resolve, 1000));
 
-        const timeoutCount = Number(data.timeoutCount);
+        const timeoutCount = Number(data.timeoutCount ?? '1');
 
         let submitPrice = '';
 
+        let submitCount = 0;
+
         while (sum < timeoutCount) {
           // 前往卖出
-          submitPrice = await goToSell(tab, false);
+          submitPrice = await goToSell(tab, false, lastPrice);
+
+          if (submitCount > 55) {
+            submitPrice = await goToSell(tab, false);
+            appendLog(`卖出超时折损卖出`, 'error');
+          } else {
+            if (submitPrice === '-1') {
+              appendLog(`当前价格比买入价低，等待${submitCount + 1}次`, 'error');
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              submitCount++;
+              continue;
+            }
+          }
 
           appendLog(`等待订单完成`, 'info');
 
@@ -295,7 +313,7 @@ export const OrderMode = ({
         if (!submitPrice) throw new Error('获取卖出价格失败, 卖单失败！！！');
 
         // 等待2s
-        await new Promise(resolve => setTimeout(resolve, 2500));
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         // 刷新余额
         const lastBalance = await getBalance(tab);
@@ -365,13 +383,13 @@ export const OrderMode = ({
 
   return (
     <form className="mt-4 flex w-full flex-col gap-4" onSubmit={handleSubmit}>
-      <div className="flex w-full max-w-sm items-center justify-between gap-3">
+      {/* <div className="flex w-full max-w-sm items-center justify-between gap-3">
         <Label className="w-28 flex-none">买入价格类型</Label>
         <RadioGroup
           name="type"
           defaultValue={orderSetting.type ?? 'Sell'}
           className="flex items-center gap-4"
-          onValueChange={value => orderSettingStorage.setVal({ type: value as 'Buy' | 'Sell' })}>
+          onValueChange={value => bicycleSettingStorage.setVal({ type: value as 'Buy' | 'Sell' })}>
           <div className="flex items-center">
             <RadioGroupItem value="Buy" id="Buy" />
             <Label htmlFor="Buy" className="pl-2 text-xs text-green-500">
@@ -385,7 +403,7 @@ export const OrderMode = ({
             </Label>
           </div>
         </RadioGroup>
-      </div>
+      </div> */}
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
         <Label htmlFor="count" className="w-28 flex-none">
@@ -397,7 +415,7 @@ export const OrderMode = ({
           id="count"
           placeholder="保守设置(检测价格波动次数)"
           defaultValue={orderSetting.count ?? '3'}
-          onChange={e => orderSettingStorage.setVal({ count: e.target.value ?? '' })}
+          onChange={e => bicycleSettingStorage.setVal({ count: e.target.value ?? '' })}
         />
       </div>
 
@@ -411,7 +429,7 @@ export const OrderMode = ({
           id="runNum"
           placeholder={`操作次数`}
           defaultValue={orderSetting.runNum ?? '1'}
-          onChange={e => orderSettingStorage.setVal({ runNum: e.target.value ?? '' })}
+          onChange={e => bicycleSettingStorage.setVal({ runNum: e.target.value ?? '' })}
         />
       </div>
 
@@ -425,21 +443,35 @@ export const OrderMode = ({
           id="timeout"
           placeholder={`挂单超时`}
           defaultValue={orderSetting.timeout ?? '3'}
-          onChange={e => orderSettingStorage.setVal({ timeout: e.target.value ?? '' })}
+          onChange={e => bicycleSettingStorage.setVal({ timeout: e.target.value ?? '' })}
         />
       </div>
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
-        <Label htmlFor="timeoutCount" className="w-28 flex-none">
-          卖出超时次数(超出次数将以最佳价格卖出止损)
+        <Label htmlFor="checkPriceTime" className="w-28 flex-none">
+          检查金额间隔(秒)
         </Label>
         <Input
           type="text"
-          name="timeoutCount"
-          id="timeoutCount"
+          name="checkPriceTime"
+          id="checkPriceTime"
           placeholder={`卖出超时次数(超出次数将以最佳价格卖出止损)`}
-          defaultValue={orderSetting.timeoutCount ?? '3'}
-          onChange={e => orderSettingStorage.setVal({ timeoutCount: e.target.value ?? '' })}
+          defaultValue={orderSetting.checkPriceTime ?? '1'}
+          onChange={e => bicycleSettingStorage.setVal({ checkPriceTime: e.target.value ?? '' })}
+        />
+      </div>
+
+      <div className="flex w-full max-w-sm items-center justify-between gap-3">
+        <Label htmlFor="checkPriceCount" className="w-28 flex-none">
+          检查金额间隔(秒)
+        </Label>
+        <Input
+          type="text"
+          name="checkPriceCount"
+          id="checkPriceCount"
+          placeholder={`卖出超出次数`}
+          defaultValue={orderSetting.checkPriceCount ?? '60'}
+          onChange={e => bicycleSettingStorage.setVal({ checkPriceCount: e.target.value ?? '' })}
         />
       </div>
 
@@ -449,7 +481,7 @@ export const OrderMode = ({
           name="orderAmountMode"
           defaultValue={orderSetting.orderAmountMode ?? 'Fixed'}
           className="flex items-center gap-4"
-          onValueChange={value => orderSettingStorage.setVal({ orderAmountMode: value as 'Fixed' | 'Random' })}>
+          onValueChange={value => bicycleSettingStorage.setVal({ orderAmountMode: value as 'Fixed' | 'Random' })}>
           <div className="flex items-center">
             <RadioGroupItem value="Fixed" id="Fixed" />
             <Label htmlFor="Fixed" className="pl-2 text-xs">
@@ -483,7 +515,7 @@ export const OrderMode = ({
           id="amount"
           placeholder={`下单金额(每次操作金额(USDT))`}
           defaultValue={orderSetting.amount ?? ''}
-          onChange={e => orderSettingStorage.setVal({ amount: e.target.value ?? '' })}
+          onChange={e => bicycleSettingStorage.setVal({ amount: e.target.value ?? '' })}
         />
       </div>
 
@@ -504,7 +536,7 @@ export const OrderMode = ({
             id="minAmount"
             placeholder={`最小金额`}
             defaultValue={orderSetting.minAmount ?? '50'}
-            onChange={e => orderSettingStorage.setVal({ minAmount: e.target.value ?? '' })}
+            onChange={e => bicycleSettingStorage.setVal({ minAmount: e.target.value ?? '' })}
           />
           <div>-</div>
           <Input
@@ -517,7 +549,7 @@ export const OrderMode = ({
             id="maxAmount"
             placeholder={`最大金额`}
             defaultValue={orderSetting.maxAmount ?? '100'}
-            onChange={e => orderSettingStorage.setVal({ maxAmount: e.target.value ?? '' })}
+            onChange={e => bicycleSettingStorage.setVal({ maxAmount: e.target.value ?? '' })}
           />
         </div>
       </div>

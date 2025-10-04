@@ -1,4 +1,5 @@
 import '@src/Popup.css';
+import { BicycleMode } from './bicycle-mode';
 import { OrderMode } from './order-mode';
 import { ReverseMode } from './reverse-mode';
 import { getBalance } from './tool';
@@ -82,6 +83,7 @@ const Popup = () => {
                 <TabsList>
                   <TabsTrigger value="Reverse">反向订单</TabsTrigger>
                   <TabsTrigger value="Order">手动卖出</TabsTrigger>
+                  <TabsTrigger value="Bicycle">摩托变单车</TabsTrigger>
                 </TabsList>
                 <TabsContent value="Reverse">
                   <ReverseMode
@@ -96,6 +98,17 @@ const Popup = () => {
                 </TabsContent>
                 <TabsContent value="Order">
                   <OrderMode
+                    setCurrentBalance={setCurrentBalance}
+                    setRuning={setRuning}
+                    setStartBalance={setStartBalance}
+                    startBalance={startBalance}
+                    runing={runing}
+                    appendLog={appendLog}
+                    setNum={setNum}
+                  />
+                </TabsContent>
+                <TabsContent value="Bicycle">
+                  <BicycleMode
                     setCurrentBalance={setCurrentBalance}
                     setRuning={setRuning}
                     setStartBalance={setStartBalance}

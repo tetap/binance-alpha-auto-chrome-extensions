@@ -332,18 +332,24 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
           limitPrice.dispatchEvent(new Event('input', { bubbles: true }));
           limitPrice.dispatchEvent(new Event('change', { bubbles: true }));
           // 设置金额
-          const sider = document.querySelector('.order-5 input[type="range"]') as any;
-          if (!sider) throw new Error('补救卖出面板滑块不存在, 请确认页面是否正确');
-          sider.value = '100';
-          const tracker1 = sider._valueTracker;
-          if (tracker1) {
-            tracker1.setValue(sider.value);
-          }
-          sider.dispatchEvent(new Event('input', { bubbles: true }));
-          sider.dispatchEvent(new Event('change', { bubbles: true }));
-          await new Promise(resolve => setTimeout(resolve, 16));
-          if (sider.value < 1) {
-            throw new Error('金额设置异常，请检查页面是否正确');
+          let sider_count = 0;
+          while (true) {
+            const sider = document.querySelector('.order-5 input[type="range"]') as any;
+            if (!sider) throw new Error('补救卖出面板滑块不存在, 请确认页面是否正确');
+            sider.value = '100';
+            const tracker1 = sider._valueTracker;
+            if (tracker1) {
+              tracker1.setValue(sider.value);
+            }
+            sider.dispatchEvent(new Event('input', { bubbles: true }));
+            sider.dispatchEvent(new Event('change', { bubbles: true }));
+            await new Promise(resolve => setTimeout(resolve, 16));
+            sider_count++;
+            if (sider.value < 1 && sider_count > 3) {
+              throw new Error('金额设置异常，请检查页面是否正确');
+            } else {
+              break;
+            }
           }
           // 确认卖出
           const submitBtn = document.querySelector('.order-5 button') as HTMLButtonElement;
@@ -408,26 +414,6 @@ export const checkWaterfall = async (tab: chrome.tabs.Tab) => {
         // 取出前面8条数据，如果存在3条以上红色价格连续则抛出异常
         const slicing = elem.slice(0, 10);
 
-        // let consecutiveSells = 0;
-        // let hasThreeConsecutiveSells = false;
-
-        // for (const e of slicing) {
-        //   const isSell = !!e.querySelector('div[style="color: var(--color-Sell);"]');
-        //   if (isSell) {
-        //     consecutiveSells++;
-        //     if (consecutiveSells >= 3) {
-        //       hasThreeConsecutiveSells = true;
-        //       break;
-        //     }
-        //   } else {
-        //     consecutiveSells = 0; // 重置计数
-        //   }
-        // }
-
-        // if (hasThreeConsecutiveSells) {
-        //   throw new Error('出现连续3个卖出价格，请检查页面是否正确');
-        // }
-
         // 判断如果存在连续红线 并且价格是越来越低则抛出异常
         let consecutivePrices: number[] = [];
 
@@ -461,22 +447,48 @@ export const checkWaterfall = async (tab: chrome.tabs.Tab) => {
         }
 
         // 如果有连续的三个红色sell则抛出异常
-        const sells = slicing.filter(e => e.querySelector('div[style="color: var(--color-Sell);"]')).slice(0, 3);
-        if (sells.length < 3) {
-          return { error: '' };
-        }
-        const prices = sells.map(e => {
-          const priceEl = e.querySelector('.flex-1.cursor-pointer');
-          return parseFloat(priceEl?.textContent?.trim() ?? '0');
-        });
-        const maxPrice = Math.max(...prices);
-        const minPrice = Math.min(...prices);
-        const diffPercent = ((maxPrice - minPrice) / minPrice) * 100;
-        if (diffPercent > 0.1) {
-          return { error: '波动超过 0.1%' };
-        } else {
-          return { error: '' };
-        }
+        // const sells = slicing.filter(e => e.querySelector('div[style="color: var(--color-Sell);"]')).slice(0, 3);
+        // if (sells.length < 3) {
+        //   return { error: '' };
+        // }
+
+        // const prices: number[] = [];
+
+        // for (const e of slicing) {
+        //   const isSell = !!e.querySelector('div[style="color: var(--color-Sell);"]');
+        //   if (isSell) {
+        //     const priceEl = e.querySelector('.flex-1.cursor-pointer');
+        //     const price = parseFloat(priceEl?.textContent?.replace(/,/g, '').trim() ?? '0');
+        //     prices.push(price);
+        //   }
+        // }
+
+        // if (prices.length > 0) {
+        //   const maxPrice = Math.max(...prices);
+        //   const minPrice = Math.min(...prices);
+
+        //   // 跌幅 = (最高 - 最低) / 最高 * 100
+        //   const dropPercent = ((maxPrice - minPrice) / maxPrice) * 100;
+
+        //   if (dropPercent > 0.1) {
+        //     throw new Error(`10 个卖出价格内出现下跌超过 0.1%（跌幅 ${dropPercent.toFixed(4)}%） ${prices}`);
+        //   }
+        // }
+
+        return { error: '' };
+
+        // const prices = sells.map(e => {
+        //   const priceEl = e.querySelector('.flex-1.cursor-pointer');
+        //   return parseFloat(priceEl?.textContent?.trim() ?? '0');
+        // });
+        // const maxPrice = Math.max(...prices);
+        // const minPrice = Math.min(...prices);
+        // const diffPercent = ((maxPrice - minPrice) / minPrice) * 100;
+        // if (diffPercent > 0.1) {
+        //   return { error: '波动超过 0.1%' };
+        // } else {
+        //   return { error: '' };
+        // }
       } catch (err) {
         return { error: String(err) };
       }
@@ -491,11 +503,11 @@ export const checkWaterfall = async (tab: chrome.tabs.Tab) => {
 };
 
 // 跳转下单 卖出
-export const goToSell = async (tab: chrome.tabs.Tab, reverse: boolean = false): Promise<string> => {
+export const goToSell = async (tab: chrome.tabs.Tab, reverse: boolean = false, lastPrice = ''): Promise<string> => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
-    args: [reverse],
-    func: async reverse => {
+    args: [reverse, lastPrice],
+    func: async (reverse, lastPrice: string) => {
       try {
         const sellPanel = document.querySelector(
           '.bn-tab__buySell[aria-controls="bn-tab-pane-1"]',
@@ -510,19 +522,23 @@ export const goToSell = async (tab: chrome.tabs.Tab, reverse: boolean = false): 
 
         // 关闭反向订单
         const btn = document.querySelector('.order-5 .bn-checkbox') as HTMLButtonElement;
-        if (!btn) throw new Error('操作卖出反向订单按钮不存在, 请确认页面是否正确');
-        // 获取aria-checked是否是true
-        const isChecked = btn.getAttribute('aria-checked') === 'true';
-        // 点击反向按钮
-        if (isChecked) {
-          btn.click();
+        if (btn) {
+          // if (!btn) throw new Error('操作卖出反向订单按钮不存在, 请确认页面是否正确');
+          // 获取aria-checked是否是true
+          const isChecked = btn.getAttribute('aria-checked') === 'true';
+          // 点击反向按钮
+          if (isChecked) {
+            btn.click();
+          }
         }
-
         const priceEl = document.querySelector(
           `.ReactVirtualized__List [style*="--color-${reverse ? 'Sell' : 'Buy'}"]`,
         ) as HTMLSpanElement;
         if (!priceEl) throw new Error('价格元素不存在, 请确认页面是否正确');
         const sellPrice = priceEl.textContent.trim();
+        if (lastPrice && parseFloat(lastPrice) >= parseFloat(sellPrice)) {
+          return { error: '', val: '-1' };
+        }
         // 设置卖出价格
         const limitPrice = document.querySelector('input#limitPrice') as any;
         if (!limitPrice) throw new Error('成交价格元素不存在, 请确认页面是否正确');
@@ -534,18 +550,24 @@ export const goToSell = async (tab: chrome.tabs.Tab, reverse: boolean = false): 
         limitPrice.dispatchEvent(new Event('input', { bubbles: true }));
         limitPrice.dispatchEvent(new Event('change', { bubbles: true }));
         // 设置金额
-        const sider = document.querySelector('.order-5 input[type="range"]') as any;
-        if (!sider) throw new Error('卖出面板滑块不存在, 请确认页面是否正确');
-        sider.value = '100';
-        const tracker1 = sider._valueTracker;
-        if (tracker1) {
-          tracker1.setValue(sider.value);
-        }
-        sider.dispatchEvent(new Event('input', { bubbles: true }));
-        sider.dispatchEvent(new Event('change', { bubbles: true }));
-        await new Promise(resolve => setTimeout(resolve, 16));
-        if (sider.value < 10) {
-          throw new Error('金额设置异常，请检查页面是否正确');
+        let sider_count = 0;
+        while (true) {
+          const sider = document.querySelector('.order-5 input[type="range"]') as any;
+          if (!sider) throw new Error('卖出面板滑块不存在, 请确认页面是否正确');
+          sider.value = '100';
+          const tracker1 = sider._valueTracker;
+          if (tracker1) {
+            tracker1.setValue(sider.value);
+          }
+          sider.dispatchEvent(new Event('input', { bubbles: true }));
+          sider.dispatchEvent(new Event('change', { bubbles: true }));
+          await new Promise(resolve => setTimeout(resolve, 16));
+          sider_count++;
+          if (sider.value < 10 && sider_count > 3) {
+            throw new Error('金额设置异常，请检查页面是否正确');
+          } else {
+            break;
+          }
         }
         // 执行卖出
         const submitBtn = document.querySelector('.order-5 button') as HTMLButtonElement;
@@ -795,7 +817,7 @@ export const checkUnknownModal = async (tab: chrome.tabs.Tab) => {
     func: () => {
       try {
         const modal = document.querySelector(`div[role='dialog'][class='bn-modal-wrap data-size-small']`);
-        if (modal) throw new Error('未知弹窗，页面错误, 请确认页面是否正确');
+        if (modal) throw new Error('未知弹窗，刷新页面, 请确认页面是否正确');
         return { error: '' };
       } catch (error) {
         return { error: String(error) };
