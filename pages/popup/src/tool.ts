@@ -503,12 +503,20 @@ export const checkWaterfall = async (tab: chrome.tabs.Tab) => {
 };
 
 // 跳转下单 卖出
-export const goToSell = async (tab: chrome.tabs.Tab, reverse: boolean = false, lastPrice = ''): Promise<string> => {
+export const goToSell = async (
+  tab: chrome.tabs.Tab,
+  reverse: boolean = false,
+  lastPrice = '',
+): Promise<{
+  isSell: string;
+  price: string;
+}> => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
     args: [reverse, lastPrice],
     func: async (reverse, lastPrice: string) => {
       try {
+        let val = '';
         const sellPanel = document.querySelector(
           '.bn-tab__buySell[aria-controls="bn-tab-pane-1"]',
         ) as HTMLButtonElement;
@@ -535,9 +543,13 @@ export const goToSell = async (tab: chrome.tabs.Tab, reverse: boolean = false, l
           `.ReactVirtualized__List [style*="--color-${reverse ? 'Sell' : 'Buy'}"]`,
         ) as HTMLSpanElement;
         if (!priceEl) throw new Error('价格元素不存在, 请确认页面是否正确');
-        const sellPrice = priceEl.textContent.trim();
-        if (lastPrice && parseFloat(lastPrice) >= parseFloat(sellPrice)) {
-          return { error: '', val: '-1' };
+        let sellPrice = priceEl.textContent.trim();
+        if (lastPrice && parseFloat(lastPrice) > parseFloat(sellPrice)) {
+          // return { error: '', val: '-1' };
+          val = '-1';
+          sellPrice = lastPrice;
+        } else {
+          val = sellPrice;
         }
         // 设置卖出价格
         const limitPrice = document.querySelector('input#limitPrice') as any;
@@ -587,7 +599,7 @@ export const goToSell = async (tab: chrome.tabs.Tab, reverse: boolean = false, l
           }
           count++;
         }
-        return { error: '', val: sellPrice };
+        return { error: '', val: { isSell: val, price: sellPrice } };
       } catch (error) {
         return { error: String(error) };
       }
@@ -600,7 +612,7 @@ export const goToSell = async (tab: chrome.tabs.Tab, reverse: boolean = false, l
   if (result?.val) {
     return result.val;
   }
-  return '';
+  return { isSell: '-1', price: '' };
 };
 
 // 校验订单 下单模式

@@ -232,9 +232,9 @@ export const BicycleMode = ({
         const nextPrice = await getPrice(tab, data.type);
 
         if (nextPrice < lastPrice) {
-          // appendLog(`最新价格(${nextPrice})比下单价格(${lastPrice})低，跳过交易，开启下一轮`, 'error');
-          throw new Error(`最新价格(${nextPrice})比下单价格(${lastPrice})低，跳过交易，开启下一轮`);
-          // lastPrice = nextPrice;
+          appendLog(`最新价格(${nextPrice})比下单价格(${lastPrice})低，跳过交易，开启下一轮`, 'error');
+          // throw new Error(`最新价格(${nextPrice})比下单价格(${lastPrice})低，跳过交易，开启下一轮`);
+          lastPrice = nextPrice;
         }
 
         // 操作确认买入
@@ -272,17 +272,16 @@ export const BicycleMode = ({
 
         while (sum < timeoutCount) {
           // 前往卖出
-          submitPrice = await goToSell(tab, false, lastPrice);
-
+          const { price, isSell } = await goToSell(tab, false, lastPrice);
+          submitPrice = price;
           if (submitCount > Number(data.checkPriceCount)) {
-            submitPrice = await goToSell(tab, false);
+            const { price } = await goToSell(tab, false);
+            submitPrice = price;
             appendLog(`卖出超时折损卖出`, 'error');
           } else {
-            if (submitPrice === '-1') {
-              appendLog(`当前价格比买入价低，等待${submitCount + 1}次`, 'error');
-              await new Promise(resolve => setTimeout(resolve, Number(data.checkPriceTime) * 1000));
+            if (isSell === '-1') {
+              appendLog(`当前价格比买入价低，原价挂出，等待${submitCount + 1}次`, 'error');
               submitCount++;
-              continue;
             }
           }
 
@@ -290,7 +289,7 @@ export const BicycleMode = ({
 
           // 校验卖出
           const check = await checkByOrderSell(tab, Number(data.timeout)).catch(err => {
-            appendLog(`卖出超时${sum + 1}次: ${err.message}`, 'error');
+            appendLog(`卖出超时${sum + 1}次: 价格：${price} ${err.message}`, 'error');
             if (submitCount > Number(data.checkPriceCount)) {
               sum++;
             }
@@ -306,7 +305,8 @@ export const BicycleMode = ({
         if (!isSuccess) {
           appendLog(`卖出超时${timeoutCount}次, 止损卖出`, 'error');
           while (true) {
-            submitPrice = await goToSell(tab, true);
+            const { price } = await goToSell(tab, true);
+            submitPrice = price;
             const check = await checkByOrderSell(tab, Number(data.timeout)).catch(err => {
               appendLog(`卖出超时${sum + 1}次: ${err.message}`, 'error');
               isSuccess = false;

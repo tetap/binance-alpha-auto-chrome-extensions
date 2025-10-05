@@ -258,7 +258,8 @@ export const OrderMode = ({
 
         while (sum < timeoutCount) {
           // 前往卖出
-          submitPrice = await goToSell(tab, false);
+          const { price } = await goToSell(tab, false);
+          submitPrice = price;
 
           appendLog(`等待订单完成`, 'info');
 
@@ -278,7 +279,8 @@ export const OrderMode = ({
         if (!isSuccess) {
           appendLog(`卖出超时${timeoutCount}次, 止损卖出`, 'error');
           while (true) {
-            submitPrice = await goToSell(tab, true);
+            const { price } = await goToSell(tab, true);
+            submitPrice = price;
             const check = await checkByOrderSell(tab, Number(data.timeout)).catch(err => {
               appendLog(`卖出超时${sum + 1}次: ${err.message}`, 'error');
               isSuccess = false;
