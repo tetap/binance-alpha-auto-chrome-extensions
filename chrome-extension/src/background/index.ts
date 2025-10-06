@@ -1,9 +1,6 @@
 import 'webextension-polyfill';
-import { exampleThemeStorage } from '@extension/storage';
 
-exampleThemeStorage.get().then(theme => {
-  console.log('theme', theme);
+chrome.action.onClicked.addListener(async tab => {
+  // 将 side panel 与当前 tab 绑定，并显示
+  await chrome.sidePanel.open({ tabId: tab.id! });
 });
-
-console.log('Background loaded');
-console.log("Edit 'chrome-extension/src/background/index.ts' and save to reload.");

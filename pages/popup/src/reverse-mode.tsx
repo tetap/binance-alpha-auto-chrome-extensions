@@ -13,6 +13,8 @@ import {
   getIsSell,
   goToSell,
   checkByOrderSell,
+  stopLoopAuth,
+  startLoopAuth,
 } from './tool';
 import { useStorage } from '@extension/shared';
 import { settingStorage, todayDealStorage } from '@extension/storage';
@@ -114,11 +116,23 @@ export const ReverseMode = ({
     setRuning(true);
     const runNum = data.runNum ? Number(data.runNum) : 1;
     let errorCount = 0;
+    const secret = (await settingStorage.get()).secret;
+    let isStop = false;
+    const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+    if (secret) {
+      startLoopAuth(tab, secret, () => {
+        isStop = true;
+        appendLog('出现验证码校验失败，自动停止', 'error');
+      });
+    }
+
     for (let i = 0; i < runNum; i++) {
+      if (isStop) {
+        break;
+      }
+
       try {
         appendLog(`当前轮次: ${i + 1}`, 'info');
-
-        const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
 
         // 校验是否有需要卖出
         appendLog(`校验是否有需要卖出`, 'info');
@@ -297,6 +311,10 @@ export const ReverseMode = ({
 
       appendLog(`当前轮次结束，等待1s 继续`, 'info');
       await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    if (secret) {
+      stopLoopAuth();
     }
 
     appendLog(`停止`, 'info');

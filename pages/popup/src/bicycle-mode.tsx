@@ -12,9 +12,11 @@ import {
   getIsSell,
   checkWaterfall,
   checkUnknownModal,
+  startLoopAuth,
+  stopLoopAuth,
 } from './tool';
 import { useStorage } from '@extension/shared';
-import { bicycleSettingStorage, todayDealStorage } from '@extension/storage';
+import { bicycleSettingStorage, settingStorage, todayDealStorage } from '@extension/storage';
 import { Button, cn, Input, Label, RadioGroup, RadioGroupItem } from '@extension/ui';
 import dayjs, { extend } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -48,6 +50,7 @@ export const BicycleMode = ({
     if (runing) return;
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
+    // console.log('settingStorage.secret', settingStorage.secret);
     // 转成对象
     const data = Object.fromEntries(formData.entries()) as {
       amount: string;
@@ -123,7 +126,20 @@ export const BicycleMode = ({
     const runNum = data.runNum ? Number(data.runNum) : 1;
     let errorCount = 0;
     const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+    const secret = (await settingStorage.get()).secret;
+    let isStop = false;
+    console.log('startLoopAuth', secret);
+    if (secret) {
+      startLoopAuth(tab, secret, () => {
+        isStop = true;
+        appendLog('出现验证码校验失败，自动停止', 'error');
+      });
+    }
     for (let i = 0; i < runNum; i++) {
+      if (isStop) {
+        break;
+      }
+
       try {
         appendLog(`当前轮次: ${i + 1}`, 'info');
         // 校验是否有需要卖出
@@ -167,7 +183,7 @@ export const BicycleMode = ({
         // 校验是否大瀑布
         await checkWaterfall(tab);
 
-        const prices = [];
+        const prices = [] as number[];
 
         while (flow <= count) {
           const buyPrice = await getPrice(tab, data.type);
@@ -344,7 +360,6 @@ export const BicycleMode = ({
         if (error instanceof Error) {
           appendLog(error.message, 'error');
           if (error.message.includes('设置异常') || error.message.includes('刷新页面')) {
-            const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
             if (tab.id) await chrome.tabs.reload(tab.id);
             errorCount = 0;
             await new Promise(resolve => setTimeout(resolve, 3000));
@@ -352,7 +367,6 @@ export const BicycleMode = ({
         }
         if (errorCount > 5 || (i + 1) % 5 === 0) {
           // 刷新页面
-          const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
           if (tab.id) await chrome.tabs.reload(tab.id);
           appendLog(`错误防抖刷新页面等待6s`, 'info');
           await new Promise(resolve => setTimeout(resolve, 6000));
@@ -384,6 +398,10 @@ export const BicycleMode = ({
       if (isSuccess) {
         break;
       }
+    }
+
+    if (secret) {
+      stopLoopAuth();
     }
 
     appendLog(`停止`, 'info');

@@ -6,7 +6,18 @@ import { getBalance } from './tool';
 import { useLogger } from './useLogger';
 import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
 import { settingStorage, todayDealStorage } from '@extension/storage';
-import { Button, cn, ErrorDisplay, LoadingSpinner, Tabs, TabsContent, TabsList, TabsTrigger } from '@extension/ui';
+import {
+  Button,
+  cn,
+  ErrorDisplay,
+  Input,
+  Label,
+  LoadingSpinner,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@extension/ui';
 import dayjs, { extend } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { useLayoutEffect, useMemo, useState } from 'react';
@@ -20,6 +31,7 @@ const Popup = () => {
 
   const todayDeal = useMemo(() => {
     const day = dayjs().utc().format('YYYY-MM-DD');
+    console.log(day, deal);
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     typeof num;
     return deal[day] ?? '0';
@@ -60,9 +72,9 @@ const Popup = () => {
   }, []);
 
   return (
-    <div className={cn('bg-slate-50', 'App flex flex-col p-4 pb-0')}>
-      <div className="flex min-h-0 flex-1 gap-4">
-        <div className="w-1/2">
+    <div className={cn('bg-slate-50', 'App p-4 pb-0')}>
+      <div className="flex min-h-0 flex-col gap-4">
+        <div className="w-full">
           <div className="bg-background mb-4 flex flex-col gap-2 rounded-md p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="w-1/2 text-xs">
@@ -72,6 +84,20 @@ const Popup = () => {
                 当前余额: <b className="text-sm">{currentBalance}</b>
               </div>
             </div>
+          </div>
+
+          <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
+            <Label htmlFor="secret" className="w-28 flex-none">
+              二次验证(secret)
+            </Label>
+            <Input
+              type="password"
+              name="secret"
+              id="secret"
+              placeholder="自动过验证码 需要开启二次验证"
+              defaultValue={setting.secret ?? ''}
+              onChange={e => settingStorage.setVal({ secret: e.target.value ?? '' })}
+            />
           </div>
 
           <div className={cn(runing ? 'cursor-not-allowed' : '')}>
@@ -123,7 +149,7 @@ const Popup = () => {
           </div>
         </div>
 
-        <div className="flex w-1/2 flex-col gap-2">
+        <div className="flex h-96 w-full flex-col gap-2">
           <div className="flex flex-none items-center justify-between text-sm font-bold">
             <div>日志输出</div>
             <Button variant={'outline'} onClick={clearLogger}>

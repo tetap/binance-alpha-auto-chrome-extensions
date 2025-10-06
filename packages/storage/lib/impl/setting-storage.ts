@@ -19,6 +19,8 @@ export type SettingState = {
   maxAmount: string;
   // 最低随机金额
   minAmount: string;
+  // 二次验证(secret)
+  secret: string;
 };
 
 // eslint-disable-next-line import-x/exports-last
@@ -40,6 +42,7 @@ const storage = createStorage<SettingState>(
     orderAmountMode: 'Fixed',
     maxAmount: '100',
     minAmount: '50',
+    secret: '',
   },
   {
     storageEnum: StorageEnum.Local,

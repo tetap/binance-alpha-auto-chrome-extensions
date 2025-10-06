@@ -24,6 +24,7 @@
     "@extension/shared": "workspace:*",
     "@extension/storage": "workspace:*",
     "@extension/ui": "workspace:*",
+    "@otplib/preset-browser": "^12.0.1",
     "@types/lodash-es": "^4.17.12",
     "dayjs": "^1.11.18",
     "lodash-es": "^4.17.21"

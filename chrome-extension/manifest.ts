@@ -38,8 +38,11 @@ const manifest = {
     type: 'module',
   },
   action: {
-    default_popup: 'popup/index.html',
+    default_title: '点击打开插件',
     default_icon: 'icon-34.png',
+  },
+  side_panel: {
+    default_path: 'popup/index.html',
   },
   icons: {
     '128': 'icon-128.png',
@@ -49,10 +52,10 @@ const manifest = {
     //   matches: ['http://*/*', 'https://*/*', '<all_urls>'],
     //   js: ['content/all.iife.js'],
     // },
-    // {
-    //   matches: ['https://example.com/*'],
-    //   js: ['content/example.iife.js'],
-    // },
+    {
+      matches: ['https://www.binance.com/zh-CN/alpha/*'],
+      js: ['content/example.iife.js'],
+    },
     // {
     //   matches: ['http://*/*', 'https://*/*', '<all_urls>'],
     //   js: ['content-ui/all.iife.js'],

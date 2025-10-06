@@ -406,6 +406,26 @@ export const checkWaterfall = async (tab: chrome.tabs.Tab) => {
     target: { tabId: tab.id! },
     func: () => {
       try {
+        const container = document.querySelector('.order-5 > div');
+
+        if (container) {
+          // 随机滚动到顶部或底部
+          const toTop = Math.random() > 0.5;
+          container.scrollTop = toTop ? 0 : container.scrollHeight;
+
+          // 定义可能触发的事件
+          const events = ['mouseover', 'mousedown', 'mouseup', 'click'];
+          const eventType = events[Math.floor(Math.random() * events.length)];
+
+          // 构造并触发事件
+          const event = new MouseEvent(eventType, {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          });
+          container.dispatchEvent(event);
+        }
+
         const elem = Array.from(
           document
             .querySelector('.order-4 .ReactVirtualized__Grid .ReactVirtualized__Grid__innerScrollContainer')
@@ -516,6 +536,27 @@ export const goToSell = async (
     args: [reverse, lastPrice],
     func: async (reverse, lastPrice: string) => {
       try {
+        const container = document.querySelector('.order-5 > div');
+
+        console.log('container', container);
+        if (container) {
+          // 随机滚动到顶部或底部
+          const toTop = Math.random() > 0.5;
+          container.scrollTop = toTop ? 0 : container.scrollHeight;
+
+          // 定义可能触发的事件
+          const events = ['mouseover', 'mousedown', 'mouseup', 'click'];
+          const eventType = events[Math.floor(Math.random() * events.length)];
+
+          // 构造并触发事件
+          const event = new MouseEvent(eventType, {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          });
+          container.dispatchEvent(event);
+        }
+
         let val = '';
         const sellPanel = document.querySelector(
           '.bn-tab__buySell[aria-controls="bn-tab-pane-1"]',
@@ -839,5 +880,106 @@ export const checkUnknownModal = async (tab: chrome.tabs.Tab) => {
   const [{ result }] = results;
   if (result?.error) {
     throw new Error(result.error);
+  }
+};
+
+export const getCode = (secret: string) => (window as any).otplib.authenticator.generate(secret);
+
+// 获取是否出现验证码弹窗
+export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
+  const isModal = await chrome.scripting.executeScript({
+    target: { tabId: tab.id! },
+    func: () => {
+      const dialog = document.querySelector('#mfa-shadow-host');
+      if (dialog) {
+        return true;
+      }
+      console.log('无需二次验证码');
+      return false;
+    },
+  });
+  const [{ result }] = isModal;
+  if (result) {
+    if (!secret) throw new Error('出现验证码，但是未设置，自动停止');
+    const code = getCode(secret);
+    if (!code) throw new Error('出现验证码，但获取验证码失败，自动停止');
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id! },
+      args: [code],
+      func: async (code: string) => {
+        try {
+          const dialog = document.querySelector('#mfa-shadow-host');
+          if (dialog) {
+            const root = dialog.shadowRoot;
+            if (!root) throw new Error('验证失败，自动停止');
+            // 获取是否生物验证
+            if (root.querySelector('.mfa-security-page-title')?.textContent === '通过通行密钥验证') {
+              const btn = root.querySelector('.bidscls-btnLink2') as HTMLButtonElement;
+              if (btn) {
+                // 跳转二次验证
+                btn.click();
+              }
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            const steps = root.querySelectorAll('.bn-mfa-overview-step-title');
+            const sfzapp = Array.from(steps).find(c => c.innerHTML.includes('身份验证')) as HTMLButtonElement;
+            if (sfzapp) {
+              sfzapp.click();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            // 判断是否是身份验证器
+            const checkText = root.querySelector('.bn-formItem-label')?.textContent;
+            if (checkText === '身份验证器App') {
+              // 查找input
+              const input = root.querySelector('.bn-textField-input') as any;
+              const value = code;
+
+              const nativeInputValueSetter = (Object as any).getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype,
+                'value',
+              ).set;
+
+              nativeInputValueSetter.call(input, value);
+
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              input.dispatchEvent(new Event('change', { bubbles: true }));
+
+              console.log('通过验证码');
+            }
+          }
+          console.log('通过验证码失败...');
+          return { error: '' };
+        } catch (error) {
+          return { error: String(error) };
+        }
+      },
+    });
+    const [{ result: result2 }] = results;
+    if (result2?.error) {
+      throw new Error(result2?.error);
+    }
+    return true;
+  }
+  return false;
+};
+
+export let loop = false;
+
+export const stopLoopAuth = async () => {
+  loop = false;
+};
+
+export const startLoopAuth = async (tab: chrome.tabs.Tab, secret: string, callback: (stop: boolean) => void) => {
+  loop = true;
+  console.log('startLoopAuth');
+  while (loop) {
+    console.log('二次验证码检测中...');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await checkAuthModal(tab, secret).catch((err: { message: string }) => {
+      console.error('startLoopAuth', err.message);
+      if (err.message.includes('停止')) {
+        callback(true);
+      }
+    });
   }
 };
