@@ -943,7 +943,7 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
 
               input.dispatchEvent(new Event('input', { bubbles: true }));
               input.dispatchEvent(new Event('change', { bubbles: true }));
-
+              await new Promise(resolve => setTimeout(resolve, 3000));
               console.log('通过验证码');
             }
           }
