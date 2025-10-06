@@ -14,6 +14,7 @@ import {
   checkUnknownModal,
   startLoopAuth,
   stopLoopAuth,
+  cancelOrder,
 } from './tool';
 import { useStorage } from '@extension/shared';
 import { bicycleSettingStorage, settingStorage, todayDealStorage } from '@extension/storage';
@@ -144,6 +145,7 @@ export const BicycleMode = ({
         appendLog(`当前轮次: ${i + 1}`, 'info');
         // 校验是否有需要卖出
         appendLog(`校验是否有需要卖出`, 'info');
+        await cancelOrder(tab);
         const isSell = await getIsSell(tab);
         let sum = 0;
         let isSuccess = false;

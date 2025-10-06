@@ -767,6 +767,40 @@ export const checkByOrderSell = async (tab: chrome.tabs.Tab, timeout: number = 3
   return result;
 };
 
+export const cancelOrder = async (tab: chrome.tabs.Tab) => {
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id! },
+    func: async () => {
+      const sell = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Sell);"]');
+      if (sell) {
+        const evt = new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+        });
+        const svg = sell.parentNode!.parentNode!.querySelector('svg');
+        if (svg) {
+          svg.dispatchEvent(evt);
+        }
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+      const buy = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Sell);"]');
+      if (buy) {
+        const evt = new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+        });
+        const svg = buy.parentNode!.parentNode!.querySelector('svg');
+        if (svg) {
+          svg.dispatchEvent(evt);
+        }
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+    },
+  });
+};
+
 export const getIsSell = async (tab: chrome.tabs.Tab) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
