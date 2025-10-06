@@ -894,7 +894,6 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
       if (dialog) {
         return true;
       }
-      console.log('无需二次验证码');
       return false;
     },
   });
