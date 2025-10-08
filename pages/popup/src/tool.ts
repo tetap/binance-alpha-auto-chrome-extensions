@@ -784,7 +784,7 @@ export const cancelOrder = async (tab: chrome.tabs.Tab) => {
         }
         await new Promise(resolve => setTimeout(resolve, 1500));
       }
-      const buy = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Sell);"]');
+      const buy = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Buy);"]');
       if (buy) {
         const evt = new MouseEvent('click', {
           bubbles: true,

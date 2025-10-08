@@ -264,7 +264,7 @@ export const BicycleMode = ({
         appendLog(`操作买入待确认 下单价格: ${lastPrice} 操作金额: ${amount}`, 'info');
 
         // 校验是否大瀑布
-        await checkWaterfall(tab);
+        // await checkWaterfall(tab);
 
         // 检查弹窗并确认
         await checkBuy(tab);
