@@ -15,6 +15,7 @@ import {
   checkByOrderSell,
   stopLoopAuth,
   startLoopAuth,
+  cancelOrder,
 } from './tool';
 import { useStorage } from '@extension/shared';
 import { settingStorage, todayDealStorage } from '@extension/storage';
@@ -136,6 +137,7 @@ export const ReverseMode = ({
 
         // 校验是否有需要卖出
         appendLog(`校验是否有需要卖出`, 'info');
+        await cancelOrder(tab);
         const isSell = await getIsSell(tab);
         let sum = 0,
           isSuccess = false;

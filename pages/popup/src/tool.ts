@@ -962,6 +962,7 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
             }
             // 判断是否是身份验证器
             const checkText = root.querySelector('.bn-formItem-label')?.textContent;
+            console.log('通过验证码');
             if (checkText === '身份验证器App') {
               // 查找input
               const input = root.querySelector('.bn-textField-input') as any;
@@ -976,11 +977,13 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
 
               input.dispatchEvent(new Event('input', { bubbles: true }));
               input.dispatchEvent(new Event('change', { bubbles: true }));
-              await new Promise(resolve => setTimeout(resolve, 3000));
-              console.log('通过验证码');
+              await new Promise(resolve => setTimeout(resolve, 5000));
+              const dialog = document.querySelector('#mfa-shadow-host');
+              if (dialog) {
+                window.location.reload();
+              }
             }
           }
-          console.log('通过验证码失败...');
           return { error: '' };
         } catch (error) {
           return { error: String(error) };

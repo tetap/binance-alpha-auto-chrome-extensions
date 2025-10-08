@@ -204,7 +204,7 @@ export const BicycleMode = ({
             break;
           }
           lastPrice = buyPrice;
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
 
         // 拿到最低价格
