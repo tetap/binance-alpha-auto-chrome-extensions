@@ -67,7 +67,7 @@ export const getBalance = async (tab: chrome.tabs.Tab) => {
         buyPanel.click();
         await new Promise(resolve => setTimeout(resolve, 1000));
         const UsdtEle = document.querySelector(
-          ".order-5 .t-caption1 div[class~='text-PrimaryText']",
+          '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .t-caption1 div[class~="text-PrimaryText"]',
         ) as HTMLSpanElement;
         if (!UsdtEle) throw new Error('获取不到余额, 请确认页面是否正确');
         // 返回余额（字符串）
@@ -122,7 +122,7 @@ export const triggerBuy = async (tab: chrome.tabs.Tab) => {
     func: () => {
       try {
         const btn = document.querySelector(
-          '.order-5 button[class="bn-button bn-button__buy data-size-middle w-full"]',
+          '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] button[class="bn-button bn-button__buy data-size-middle w-full"]',
         ) as HTMLButtonElement;
         if (!btn) {
           throw new Error('买入按钮不存在, 刷新页面, 请确认页面是否正确');
@@ -181,7 +181,9 @@ export const checkReverseOrder = async (tab: chrome.tabs.Tab) => {
     target: { tabId: tab.id! },
     func: () => {
       try {
-        const btn = document.querySelector('.order-5 .bn-checkbox') as HTMLButtonElement;
+        const btn = document.querySelector(
+          '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .bn-checkbox',
+        ) as HTMLButtonElement;
         if (!btn) throw new Error('反向订单按钮不存在, 请确认页面是否正确');
         // 获取aria-checked是否是true
         const isChecked = btn.getAttribute('aria-checked') === 'true';
@@ -307,7 +309,9 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
           sellPanel.click();
           await new Promise(resolve => setTimeout(resolve, 500));
           // 关闭反向订单
-          const btn = document.querySelector('.order-5 .bn-checkbox') as HTMLButtonElement;
+          const btn = document.querySelector(
+            '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .bn-checkbox',
+          ) as HTMLButtonElement;
           if (!btn) throw new Error('操作卖出补救反向订单按钮不存在, 刷新页面, 请确认页面是否正确');
           // 获取aria-checked是否是true
           const isChecked = btn.getAttribute('aria-checked') === 'true';
@@ -334,7 +338,9 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
           // 设置金额
           let sider_count = 0;
           while (true) {
-            const sider = document.querySelector('.order-5 input[type="range"]') as any;
+            const sider = document.querySelector(
+              '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]',
+            ) as any;
             if (!sider) throw new Error('补救卖出面板滑块不存在, 请确认页面是否正确');
             sider.value = '100';
             const tracker1 = sider._valueTracker;
@@ -352,7 +358,9 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
             }
           }
           // 确认卖出
-          const submitBtn = document.querySelector('.order-5 button') as HTMLButtonElement;
+          const submitBtn = document.querySelector(
+            '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] button',
+          ) as HTMLButtonElement;
           if (!submitBtn) throw new Error('补救卖出面板提交按钮不存在, 请确认页面是否正确');
           submitBtn.click();
           await new Promise(resolve => setTimeout(resolve, 1500));
@@ -406,7 +414,7 @@ export const checkWaterfall = async (tab: chrome.tabs.Tab) => {
     target: { tabId: tab.id! },
     func: () => {
       try {
-        const container = document.querySelector('.order-5 > div');
+        const container = document.querySelector('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] > div');
 
         if (container) {
           // 随机滚动到顶部或底部
@@ -536,7 +544,7 @@ export const goToSell = async (
     args: [reverse, lastPrice],
     func: async (reverse, lastPrice: string) => {
       try {
-        const container = document.querySelector('.order-5 > div');
+        const container = document.querySelector('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] > div');
 
         console.log('container', container);
         if (container) {
@@ -570,7 +578,9 @@ export const goToSell = async (
         await new Promise(resolve => setTimeout(resolve, 300));
 
         // 关闭反向订单
-        const btn = document.querySelector('.order-5 .bn-checkbox') as HTMLButtonElement;
+        const btn = document.querySelector(
+          '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .bn-checkbox',
+        ) as HTMLButtonElement;
         if (btn) {
           // if (!btn) throw new Error('操作卖出反向订单按钮不存在, 请确认页面是否正确');
           // 获取aria-checked是否是true
@@ -605,7 +615,9 @@ export const goToSell = async (
         // 设置金额
         let sider_count = 0;
         while (true) {
-          const sider = document.querySelector('.order-5 input[type="range"]') as any;
+          const sider = document.querySelector(
+            '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]',
+          ) as any;
           if (!sider) throw new Error('卖出面板滑块不存在, 请确认页面是否正确');
           sider.value = '100';
           const tracker1 = sider._valueTracker;
@@ -623,7 +635,9 @@ export const goToSell = async (
           }
         }
         // 执行卖出
-        const submitBtn = document.querySelector('.order-5 button') as HTMLButtonElement;
+        const submitBtn = document.querySelector(
+          '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] button',
+        ) as HTMLButtonElement;
         if (!submitBtn) throw new Error('卖出面板提交按钮不存在, 请确认页面是否正确');
         submitBtn.click();
         // 校验卖出
@@ -830,7 +844,9 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
         limitPrice.dispatchEvent(new Event('input', { bubbles: true }));
         limitPrice.dispatchEvent(new Event('change', { bubbles: true }));
         // 设置金额
-        const sider = document.querySelector('.order-5 input[type="range"]') as any;
+        const sider = document.querySelector(
+          '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]',
+        ) as any;
         if (!sider) throw new Error('卖出面板滑块不存在, 请确认页面是否正确');
         sider.value = '100';
         const tracker1 = sider._valueTracker;
@@ -878,7 +894,7 @@ export const checkAmount = async (tab: chrome.tabs.Tab) => {
         await new Promise(resolve => setTimeout(resolve, 300));
         sellPanel.click();
         await new Promise(resolve => setTimeout(resolve, 300));
-        const hasError = document.querySelector('.order-5 .text-Error');
+        const hasError = document.querySelector('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .text-Error');
         if (hasError && hasError.textContent === '超过可用余额') {
           return { error: '超过可用余额, 刷新页面，请检查页面是否正确', val: true };
         }
