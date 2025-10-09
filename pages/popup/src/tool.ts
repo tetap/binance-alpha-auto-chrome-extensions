@@ -4,8 +4,38 @@ declare global {
   }
 }
 
+export const getId = async (tab: chrome.tabs.Tab) => {
+  const name = (await chrome.scripting.executeScript({
+    target: { tabId: tab.id! },
+    func: () => {
+      try {
+        const dom = document.querySelector('.bg-BasicBg .text-PrimaryText');
+        return dom?.textContent.trim();
+      } catch (err: any) {
+        console.error(err);
+        return '';
+      }
+    },
+  })) as any;
+  if (!name.length || !name[0]) return '';
+  const listRequest = await fetch(
+    'https://www.binance.com/bapi/defi/v1/public/wallet-direct/buw/wallet/cex/alpha/all/token/list',
+  );
+  const list = (await listRequest.json()).data as { alphaId: string; symbol: string }[];
+  const cur = list.find(c => c.symbol === name[0]);
+  if (!cur) return '';
+  return `${cur.symbol}USDT`;
+};
+
 // 获取价格
-export const getPrice = async (tab: chrome.tabs.Tab, type: 'Buy' | 'Sell') => {
+export const getPrice = async (tab: chrome.tabs.Tab, type: 'Buy' | 'Sell', symbol?: string) => {
+  if (symbol) {
+    const request = await fetch(
+      'https://www.binance.com/bapi/defi/v1/public/alpha-trade/agg-trades?symbol=ALPHA_382USDT&limit=1',
+    );
+    const json = (await request.json()) as { data: { p: string }[] };
+    return json.data[json.data.length - 1].p;
+  }
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
     args: [type],
@@ -644,7 +674,7 @@ export const checkByOrderBuy = async (tab: chrome.tabs.Tab, timeout: number = 3)
     world: 'MAIN',
     func: async timeout => {
       try {
-        await new Promise(resolve => setTimeout(resolve, 1100));
+        // await new Promise(resolve => setTimeout(resolve, 1100));
         const order = document.querySelector('div[id="bn-tab-orderOrder"]') as HTMLButtonElement;
         if (!order) throw new Error('订单元素不存在, 请确认页面是否正确');
         const limit = document.querySelector('div[id="bn-tab-limit"]') as HTMLButtonElement;
@@ -661,7 +691,7 @@ export const checkByOrderBuy = async (tab: chrome.tabs.Tab, timeout: number = 3)
             break;
           }
         }
-        await new Promise(resolve => setTimeout(resolve, 1100));
+        // await new Promise(resolve => setTimeout(resolve, 1100));
         // 取消买入订单
         const buy = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Buy);"]');
         console.log('buy???', buy);
@@ -817,7 +847,7 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
         if (error) {
           return { error: '', val: true };
         }
-        if (Number(sider.value) >= 80) {
+        if (Number(sider.value) >= 10) {
           return { error: '', val: true };
         }
         return { error: '', val: false };
