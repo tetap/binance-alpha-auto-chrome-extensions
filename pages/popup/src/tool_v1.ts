@@ -307,8 +307,9 @@ export const backSell = async (
       // await jumpToSell(tab); // 跳转卖出
       const price = await getPrice(symbol); // 获取价格
       if (!price) throw new Error('获取价格失败');
+      const sellPrice = (Number(price) - Number(price) * 0.01).toString();
       // 设置卖出价格
-      await setPrice(tab, (Number(price) - Number(price) * 0.01).toString());
+      await setPrice(tab, sellPrice);
       // 设置卖出数量
       await setRangeValue(tab, '100');
       // 执行卖出
@@ -319,7 +320,7 @@ export const backSell = async (
       if (isAuth) await new Promise(resolve => setTimeout(resolve, 3000));
       // 等待订单
       await waitOrder(tab, timeout);
-      appendLog(`卖出成功 价格：${price}`, 'success');
+      appendLog(`卖出成功 价格：${sellPrice}`, 'success');
     } catch (error: any) {
       console.error(error);
       appendLog(error.message, 'error');
