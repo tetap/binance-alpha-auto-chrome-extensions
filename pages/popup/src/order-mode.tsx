@@ -1,27 +1,28 @@
 import '@src/Popup.css';
+import { startLoopAuth, stopLoopAuth } from './tool';
 import {
-  getPrice,
-  setPrice,
-  getBalance,
-  setAmount,
-  triggerBuy,
-  checkBuy,
-  checkByOrderBuy,
-  goToSell,
-  checkByOrderSell,
-  getIsSell,
-  checkWaterfall,
-  checkUnknownModal,
-  startLoopAuth,
-  stopLoopAuth,
+  backSell,
+  callSubmit,
   cancelOrder,
-} from './tool';
+  checkUnknownModal,
+  detectDropRisk,
+  getBalance,
+  getId,
+  getPrice,
+  getPriceList,
+  isAuthModal,
+  jumpToBuy,
+  setLimitTotal,
+  setPrice,
+  waitOrder,
+} from './tool_v1';
 import { useStorage } from '@extension/shared';
 import { orderSettingStorage, settingStorage, todayDealStorage } from '@extension/storage';
 import { Button, cn, Input, Label, RadioGroup, RadioGroupItem } from '@extension/ui';
 import dayjs, { extend } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { floor } from 'lodash-es';
+import { useRef } from 'react';
 
 extend(utc);
 
@@ -45,344 +46,229 @@ export const OrderMode = ({
   setNum,
 }: IOrderModeProps) => {
   const orderSetting = useStorage(orderSettingStorage);
+  const stopRef = useRef(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const getOptions = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (runing) return;
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
-    // 转成对象
     const data = Object.fromEntries(formData.entries()) as {
       amount: string;
       count: string;
-      dot: string;
-      type: 'Buy' | 'Sell';
       runNum: string;
       timeout: string;
-      timeoutCount: string;
       orderAmountMode: 'Fixed' | 'Random';
       maxAmount: string;
       minAmount: string;
     };
 
-    if (!data.count || !data.type || !data.runNum || !data.timeout) {
-      appendLog('参数不能为空', 'error');
-      setRuning(false);
-      return;
+    if (!data.runNum || !data.timeout || !data.count) {
+      throw new Error('参数不能为空');
     }
-    // 校验amount count dot runNum 是否为数字
-    if (isNaN(Number(data.count)) || isNaN(Number(data.runNum)) || isNaN(Number(data.timeout))) {
-      appendLog('参数必须为数字', 'error');
-      setRuning(false);
-      return;
+    if (isNaN(Number(data.runNum)) || isNaN(Number(data.count))) {
+      throw new Error('参数必须为数字');
     }
     // 校验下单金额
     if (data.orderAmountMode === 'Fixed') {
       if (!data.amount) {
-        appendLog('下单金额不能为空', 'error');
-        setRuning(false);
-        return;
+        throw new Error('下单金额不能为空');
       }
       if (isNaN(Number(data.amount))) {
-        appendLog('下单金额必须为数字', 'error');
-        setRuning(false);
-        return;
+        throw new Error('下单金额必须为数字');
       }
     } else if (data.orderAmountMode === 'Random') {
       if (!data.maxAmount || !data.minAmount) {
-        appendLog('下单金额范围不能为空', 'error');
-        setRuning(false);
-        return;
+        throw new Error('下单金额范围不能为空');
       }
       if (isNaN(Number(data.maxAmount)) || isNaN(Number(data.minAmount))) {
-        appendLog('下单金额范围必须为数字', 'error');
-        setRuning(false);
-        return;
+        throw new Error('下单金额范围必须为数字');
       }
       if (Number(data.maxAmount) < Number(data.minAmount)) {
-        appendLog('下单金额范围错误', 'error');
-        setRuning(false);
-        return;
+        throw new Error('下单金额范围错误');
       }
     } else {
-      appendLog('下单金额模式错误', 'error');
+      throw new Error('下单金额模式错误');
+    }
+
+    return data;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const options = getOptions(e);
+
+    stopRef.current = false;
+
+    setRuning(true);
+
+    const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+
+    const symbol = await getId(tab).catch(() => ''); // 获取货币id
+
+    if (!symbol) {
+      appendLog('获取货币id失败', 'error');
       setRuning(false);
       return;
     }
 
-    setRuning(true);
-    const runNum = data.runNum ? Number(data.runNum) : 1;
-    let errorCount = 0;
-    const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
     const secret = (await settingStorage.get()).secret;
-    let isStop = false;
     if (secret) {
       startLoopAuth(tab, secret, () => {
-        isStop = true;
+        stopRef.current = true;
         appendLog('出现验证码校验失败，自动停止', 'error');
       });
     }
+
+    const runNum = options.runNum ? Number(options.runNum) : 1; // 运行次数
+
+    const timeout = options.timeout ? Number(options.timeout) : 1; // 下单超时时间
+
+    const count = Number(options.count); // 保守设置
+
+    let balance = await getBalance(tab);
+
+    if (!balance) return console.error('获取余额失败');
+
+    if (!startBalance) {
+      setStartBalance(balance);
+    }
     for (let i = 0; i < runNum; i++) {
-      if (isStop) {
+      if (stopRef.current) {
+        appendLog(`意外终止`, 'error');
         break;
       }
+      appendLog(`当前轮次: ${i + 1}`, 'info');
 
       try {
-        appendLog(`当前轮次: ${i + 1}`, 'info');
-        // 校验是否有需要卖出
-        appendLog(`校验是否有需要卖出`, 'info');
-
-        await cancelOrder(tab);
-
-        const isSell = await getIsSell(tab);
-        let sum = 0;
-        let isSuccess = false;
-        while (isSell) {
-          await goToSell(tab, true);
-          const check = await checkByOrderSell(tab, Number(data.timeout)).catch(err => {
-            appendLog(`卖出超时${sum + 1}次: ${err.message}`, 'error');
-            sum++;
-            isSuccess = false;
-            return { error: err.message };
-          });
-          isSuccess = check?.error ? false : true;
-          if (isSuccess) {
-            break;
-          }
-        }
-
-        // 校验未知弹窗风险
+        // 等待1s
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        // 校验是否有未知弹窗
         await checkUnknownModal(tab);
+        // 校验是否有未取消的订单
+        await cancelOrder(tab);
+        // 兜底卖出
+        await backSell(tab, symbol, appendLog, timeout);
+        // 回到买入面板
+        await jumpToBuy(tab);
 
-        const balance = await getBalance(tab);
-
-        if (!balance) return console.error('获取余额失败');
-
-        if (!startBalance) {
-          setStartBalance(balance);
+        // 抖动检测
+        const trades = await getPriceList(symbol);
+        console.log('trades', trades);
+        // 获取抖动窗口
+        const priceWindows = detectDropRisk(trades, {
+          buyIndex: 0,
+          windowMs: 10_000,
+          thresholdPct: 0.1,
+          volumeWeighted: true,
+        });
+        appendLog(`价格抖动窗口: 是否买入: ${priceWindows.hasRisk ? '取消' : '买入'};`, 'info');
+        appendLog(`价格抖动窗口: 买入价: ${priceWindows.buyPrice};最低价: ${priceWindows.minPrice};`, 'info');
+        if (priceWindows.hasRisk) {
+          i--;
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          continue;
         }
-
-        setCurrentBalance(balance);
-
-        const count = Number(data.count);
-        // 计数
-        let flow = 0;
-        // 获取一个买入价格
-        let lastPrice = '';
-
-        // 校验是否大瀑布
-        await checkWaterfall(tab);
-
-        const prices = [] as number[];
-
-        while (flow <= count) {
-          const buyPrice = await getPrice(tab, data.type);
-          if (!buyPrice) throw new Error('获取价格失败');
-          appendLog(`获取到下单价格: ${buyPrice}`, 'info');
-          prices.push(parseFloat(buyPrice));
-          if (lastPrice === buyPrice || !lastPrice) {
-            // 价格相同，添加计数
-            flow++;
-          } else {
-            flow = 0;
+        let buyPrice = await getPrice(symbol);
+        appendLog(`保守设置次数:${count}`, 'info');
+        for (let j = 0; j < count; j++) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          // 获取买入价
+          const curPrice = await getPrice(symbol); // 获取价格
+          appendLog(`当前价格：${curPrice}`, 'info');
+          if (Number(curPrice) < Number(buyPrice)) {
+            buyPrice = curPrice;
+            appendLog(`价格下跌，调整买入价为${buyPrice}`, 'info');
           }
-          // 新价格比上一个价格低，则可以提交订单
-          if (lastPrice && lastPrice < buyPrice) {
-            lastPrice = buyPrice;
-            break;
-          }
-          lastPrice = buyPrice;
-          await new Promise(resolve => setTimeout(resolve, 1000));
         }
-
-        // 拿到最低价格
-        lastPrice = Math.min(...prices).toString();
-
-        appendLog(`设置下单价格: ${lastPrice}`, 'info');
-
-        // 校验是否大瀑布
-        await checkWaterfall(tab);
-
-        // 设置价格
-        await setPrice(tab, lastPrice);
-
-        // 获取最近一个相反的价格
-        const sellPrice = await getPrice(tab, data.type === 'Buy' ? 'Sell' : 'Buy');
-        // 计算百分比
-        const percent = 1 - Number(sellPrice) / Number(lastPrice);
-        // 如果相反价格超过0.01则不买入
-        if (percent > 0.01) {
-          throw new Error('价格波动较大，跳过交易，开启下一轮');
-        }
-
+        if (!buyPrice) throw new Error('获取价格失败');
+        appendLog(`获取到买入价格: ${buyPrice}`, 'info');
+        // 操作写入买入价格
+        await setPrice(tab, buyPrice);
+        // 计算买入金额
         const amount =
-          data.orderAmountMode === 'Fixed'
-            ? data.amount
+          options.orderAmountMode === 'Fixed'
+            ? options.amount
             : floor(
-                (Number(data.maxAmount) - Number(data.minAmount)) * Math.random() + Number(data.minAmount),
+                (Number(options.maxAmount) - Number(options.minAmount)) * Math.random() + Number(options.minAmount),
                 2,
               ).toString();
+        // 设置买入金额
+        await setLimitTotal(tab, amount);
 
-        // 设置操作金额
-        setAmount(tab, Number(amount));
+        const checkPrice = await getPrice(symbol); // 获取价格
 
-        appendLog(`设置操作金额成功: ${amount}`, 'info');
-
-        appendLog(`执行瀑布检测`, 'info');
-
-        // 校验是否大瀑布
-        await checkWaterfall(tab);
-
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        const nextPrice = await getPrice(tab, data.type);
-
-        if (nextPrice < lastPrice) {
-          // appendLog(`最新价格(${nextPrice})比下单价格(${lastPrice})低，跳过交易，开启下一轮`, 'error');
-          throw new Error(`最新价格(${nextPrice})比下单价格(${lastPrice})低，跳过交易，开启下一轮`);
-          // lastPrice = nextPrice;
+        if (Number(checkPrice) < Number(buyPrice)) {
+          appendLog(`价格${buyPrice}下滑到${checkPrice}，休息一会儿`, 'error');
+          await new Promise(resolve => setTimeout(resolve, 6000));
+          throw new Error(`价格${buyPrice}下滑到${checkPrice}，停止买入`);
         }
 
         // 操作确认买入
-        await triggerBuy(tab);
+        await callSubmit(tab);
+        // 判断是否出现验证码
+        const isAuth = await isAuthModal(tab);
+        // 出现验证弹窗等待
+        if (isAuth) {
+          appendLog('出现验证码等待过验证', 'info');
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+        // 等待订单完成
+        await waitOrder(tab, timeout);
 
-        // 判断是否出现 超过可用余额 有可能是页面刷新不够快
-        // await checkAmount(tab);
-
-        appendLog(`操作买入待确认 下单价格: ${lastPrice} 操作金额: ${amount}`, 'info');
-
-        // 校验是否大瀑布
-        await checkWaterfall(tab);
-
-        // 检查弹窗并确认
-        await checkBuy(tab);
-
-        appendLog(`操作买入确认`, 'info');
-
-        // 监听买入订单是否已完成
-        await checkByOrderBuy(tab, Number(data.timeout));
+        appendLog(`下单成功: 价格： ${buyPrice} 金额：${amount}`, 'success');
 
         const day = dayjs().utc().format('YYYY-MM-DD');
 
         todayDealStorage.setVal(day, amount);
 
-        appendLog('前往卖出', 'info');
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // await new Promise(resolve => setTimeout(resolve, 1000));
-
-        const timeoutCount = Number(data.timeoutCount);
-
-        let submitPrice = '';
-
-        while (sum < timeoutCount) {
-          // 前往卖出
-          const { price } = await goToSell(tab, false);
-          submitPrice = price;
-
-          appendLog(`等待订单完成`, 'info');
-
-          // 校验卖出
-          const check = await checkByOrderSell(tab, Number(data.timeout)).catch(err => {
-            appendLog(`卖出超时${sum + 1}次: ${err.message}`, 'error');
-            sum++;
-            return { error: err.message };
-          });
-          isSuccess = check?.error ? false : true;
-          console.log(check, isSuccess);
-          if (isSuccess) {
-            break;
-          }
-        }
-
-        if (!isSuccess) {
-          appendLog(`卖出超时${timeoutCount}次, 止损卖出`, 'error');
-          while (true) {
-            const { price } = await goToSell(tab, true);
-            submitPrice = price;
-            const check = await checkByOrderSell(tab, Number(data.timeout)).catch(err => {
-              appendLog(`卖出超时${sum + 1}次: ${err.message}`, 'error');
-              isSuccess = false;
-              console.log(err.message);
-              return { error: err.message };
-            });
-            isSuccess = check?.error ? false : true;
-            if (isSuccess) {
-              break;
-            }
-          }
-        }
-
-        if (!submitPrice) throw new Error('获取卖出价格失败, 卖单失败！！！');
+        await backSell(tab, symbol, appendLog, timeout);
 
         // 等待2s
-        await new Promise(resolve => setTimeout(resolve, 2500));
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         // 刷新余额
-        const lastBalance = await getBalance(tab);
+        const balance = await getBalance(tab);
 
-        if (!lastBalance) throw new Error('获取余额失败');
+        if (!balance) throw new Error('获取余额失败');
 
-        appendLog(`刷新余额: ${lastBalance}`, 'info');
+        appendLog(`刷新余额: ${balance}`, 'info');
 
-        setCurrentBalance(lastBalance);
+        setCurrentBalance(balance);
 
         setNum(Date.now());
-
-        appendLog(`下单成功: ${amount}(USDT) 下单价格: ${lastPrice} 卖出价格: ${submitPrice}`, 'success');
-
-        errorCount = 0;
-      } catch (error: unknown) {
-        console.error(error);
-        if (error instanceof Error) {
-          appendLog(error.message, 'error');
-          if (error.message.includes('设置异常') || error.message.includes('刷新页面')) {
-            const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
-            if (tab.id) await chrome.tabs.reload(tab.id);
-            errorCount = 0;
-            await new Promise(resolve => setTimeout(resolve, 3000));
-          }
-        }
-        if (errorCount > 5 || (i + 1) % 5 === 0) {
-          // 刷新页面
-          const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+      } catch (error: any) {
+        appendLog(error.message, 'error');
+        if (error.message.includes('刷新页面')) {
           if (tab.id) await chrome.tabs.reload(tab.id);
-          appendLog(`错误防抖刷新页面等待6s`, 'info');
-          await new Promise(resolve => setTimeout(resolve, 6000));
-
-          errorCount = 0;
+          await new Promise(resolve => setTimeout(resolve, 5000));
         }
-        errorCount++;
         i--;
       }
-
-      appendLog(`当前轮次结束，等待1s 继续`, 'info');
-      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    appendLog(`全部轮次结束 检测是否有卖出`, 'info');
+    // 等待1s
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    // 校验是否有未知弹窗
+    await checkUnknownModal(tab);
+    // 校验是否有未取消的订单
+    await cancelOrder(tab);
+    // 兜底卖出
+    await backSell(tab, symbol, appendLog, timeout);
 
-    const isSell = await getIsSell(tab);
-    let sum = 0;
-    let isSuccess = false;
-    while (isSell) {
-      await goToSell(tab, true);
-      const check = await checkByOrderSell(tab, Number(data.timeout)).catch(err => {
-        appendLog(`卖出超时${sum + 1}次: ${err.message}`, 'error');
-        sum++;
-        isSuccess = false;
-        return { error: err.message };
-      });
-      isSuccess = check?.error ? false : true;
-      if (isSuccess) {
-        break;
-      }
-    }
+    balance = await getBalance(tab);
 
-    if (secret) {
-      stopLoopAuth();
-    }
+    if (!balance) throw new Error('获取余额失败');
 
-    appendLog(`停止`, 'info');
+    appendLog(`刷新余额: ${balance}`, 'info');
+
+    setCurrentBalance(balance);
+
+    setNum(Date.now());
+
+    appendLog('执行结束', 'success');
+
+    if (secret) stopLoopAuth();
 
     setRuning(false);
   };
@@ -390,25 +276,17 @@ export const OrderMode = ({
   return (
     <form className="mt-4 flex w-full flex-col gap-4" onSubmit={handleSubmit}>
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
-        <Label className="w-28 flex-none">买入价格类型</Label>
-        <RadioGroup
-          name="type"
-          defaultValue={orderSetting.type ?? 'Sell'}
-          className="flex items-center gap-4"
-          onValueChange={value => orderSettingStorage.setVal({ type: value as 'Buy' | 'Sell' })}>
-          <div className="flex items-center">
-            <RadioGroupItem value="Buy" id="Buy" />
-            <Label htmlFor="Buy" className="pl-2 text-xs text-green-500">
-              买入价格(绿色)
-            </Label>
-          </div>
-          <div className="flex items-center">
-            <RadioGroupItem value="Sell" id="Sell" />
-            <Label htmlFor="Sell" className="pl-2 text-xs text-red-500">
-              卖出价格(红色)
-            </Label>
-          </div>
-        </RadioGroup>
+        <Label htmlFor="runNum" className="w-28 flex-none">
+          操作次数
+        </Label>
+        <Input
+          type="text"
+          name="runNum"
+          id="runNum"
+          placeholder={`操作次数`}
+          defaultValue={orderSetting.runNum ?? '1'}
+          onChange={e => orderSettingStorage.setVal({ runNum: e.target.value ?? '' })}
+        />
       </div>
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
@@ -426,20 +304,6 @@ export const OrderMode = ({
       </div>
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
-        <Label htmlFor="runNum" className="w-28 flex-none">
-          操作次数
-        </Label>
-        <Input
-          type="text"
-          name="runNum"
-          id="runNum"
-          placeholder={`操作次数`}
-          defaultValue={orderSetting.runNum ?? '1'}
-          onChange={e => orderSettingStorage.setVal({ runNum: e.target.value ?? '' })}
-        />
-      </div>
-
-      <div className="flex w-full max-w-sm items-center justify-between gap-3">
         <Label htmlFor="timeout" className="w-28 flex-none">
           挂单超时(秒)
         </Label>
@@ -450,20 +314,6 @@ export const OrderMode = ({
           placeholder={`挂单超时`}
           defaultValue={orderSetting.timeout ?? '3'}
           onChange={e => orderSettingStorage.setVal({ timeout: e.target.value ?? '' })}
-        />
-      </div>
-
-      <div className="flex w-full max-w-sm items-center justify-between gap-3">
-        <Label htmlFor="timeoutCount" className="w-28 flex-none">
-          卖出超时次数(超出次数将以最佳价格卖出止损)
-        </Label>
-        <Input
-          type="text"
-          name="timeoutCount"
-          id="timeoutCount"
-          placeholder={`卖出超时次数(超出次数将以最佳价格卖出止损)`}
-          defaultValue={orderSetting.timeoutCount ?? '3'}
-          onChange={e => orderSettingStorage.setVal({ timeoutCount: e.target.value ?? '' })}
         />
       </div>
 

@@ -830,7 +830,10 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
         await new Promise(resolve => setTimeout(resolve, 300));
         sellPanel.click();
         await new Promise(resolve => setTimeout(resolve, 300));
-        const priceEl = document.querySelector(`.ReactVirtualized__List [style*="--color-Sell"]`) as HTMLSpanElement;
+        // document.querySelector("div[class='flex-1 cursor-pointer']")
+        const priceEl = document.querySelector(
+          `.ReactVirtualized__List div[class='flex-1 cursor-pointer']`,
+        ) as HTMLSpanElement;
         if (!priceEl) throw new Error('价格元素不存在, 请确认页面是否正确');
         const sellPrice = priceEl.textContent.trim();
         // 设置卖出价格
@@ -847,7 +850,7 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
         if (error) {
           return { error: '', val: true };
         }
-        if (Number(sider.value) >= 10) {
+        if (Number(sider.value) >= 80) {
           return { error: '', val: true };
         }
         return { error: '', val: false };

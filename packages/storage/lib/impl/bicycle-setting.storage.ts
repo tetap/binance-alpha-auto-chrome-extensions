@@ -5,13 +5,8 @@ import type { BaseStorageType } from '../base/index.js';
 // eslint-disable-next-line import-x/exports-last
 export type BicycleSettingState = {
   amount: string;
-  timeout: string;
   runNum: string;
   count: string;
-  dot: string;
-  type: 'Buy' | 'Sell';
-  // 卖出超时次数(超出次数将以最佳价格卖出止损)
-  timeoutCount: string;
   // 下单金额模式 固定金额 随机金额
   orderAmountMode: 'Fixed' | 'Random';
   // 最高随机金额
@@ -33,12 +28,8 @@ const storage = createStorage<BicycleSettingState>(
   'bicycle-setting-storage-key',
   {
     amount: '',
-    timeout: '3',
     runNum: '3',
     count: '3',
-    dot: '3',
-    type: 'Buy',
-    timeoutCount: '1',
     orderAmountMode: 'Fixed',
     maxAmount: '100',
     minAmount: '50',

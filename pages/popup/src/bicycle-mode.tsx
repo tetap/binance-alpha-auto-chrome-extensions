@@ -1,6 +1,7 @@
 import '@src/Popup.css';
-import { startLoopAuth } from './tool';
+import { startLoopAuth, stopLoopAuth } from './tool';
 import {
+  getIsSell,
   backSell,
   callSubmit,
   detectDropRisk,
@@ -57,24 +58,24 @@ export const BicycleMode = ({
     const data = Object.fromEntries(formData.entries()) as {
       amount: string;
       count: string;
-      dot: string;
-      type: 'Buy' | 'Sell';
       runNum: string;
-      timeoutCount: string;
       orderAmountMode: 'Fixed' | 'Random';
       maxAmount: string;
       minAmount: string;
       checkPriceTime: string;
       checkPriceCount: string;
     };
-    data.type = 'Buy';
-    // data.type = 'Sell';
 
-    if (!data.type || !data.runNum || !data.checkPriceCount || !data.checkPriceTime) {
+    if (!data.runNum || !data.checkPriceCount || !data.checkPriceTime || !data.count) {
       throw new Error('参数不能为空');
     }
     // 校验amount count dot runNum 是否为数字
-    if (isNaN(Number(data.runNum)) || isNaN(Number(data.checkPriceCount)) || isNaN(Number(data.checkPriceTime))) {
+    if (
+      isNaN(Number(data.runNum)) ||
+      isNaN(Number(data.checkPriceCount)) ||
+      isNaN(Number(data.checkPriceTime)) ||
+      isNaN(Number(data.count))
+    ) {
       throw new Error('参数必须为数字');
     }
     // 校验下单金额
@@ -135,6 +136,8 @@ export const BicycleMode = ({
 
     const timeoutCount = options.checkPriceCount ? Number(options.checkPriceCount) : 1; // 下单超时次数
 
+    const count = Number(options.count); // 保守设置
+
     let balance = await getBalance(tab);
 
     if (!balance) return console.error('获取余额失败');
@@ -166,7 +169,7 @@ export const BicycleMode = ({
         // 获取抖动窗口
         const priceWindows = detectDropRisk(trades, {
           buyIndex: 0,
-          windowMs: 30_000,
+          windowMs: 10_000,
           thresholdPct: 0.1,
           volumeWeighted: true,
         });
@@ -174,10 +177,21 @@ export const BicycleMode = ({
         appendLog(`价格抖动窗口: 买入价: ${priceWindows.buyPrice};最低价: ${priceWindows.minPrice};`, 'info');
         if (priceWindows.hasRisk) {
           i--;
+          await new Promise(resolve => setTimeout(resolve, 3000));
           continue;
         }
-        // 获取买入价
-        const buyPrice = await getPrice(symbol); // 获取价格
+        let buyPrice = await getPrice(symbol);
+        appendLog(`保守设置次数:${count}`, 'info');
+        for (let j = 0; j < count; j++) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          // 获取买入价
+          const curPrice = await getPrice(symbol); // 获取价格
+          appendLog(`当前价格：${curPrice}`, 'info');
+          if (Number(curPrice) < Number(buyPrice)) {
+            buyPrice = curPrice;
+            appendLog(`价格下跌，调整买入价为${buyPrice}`, 'info');
+          }
+        }
         if (!buyPrice) throw new Error('获取价格失败');
         appendLog(`获取到买入价格: ${buyPrice}`, 'info');
         // 操作写入买入价格
@@ -236,8 +250,8 @@ export const BicycleMode = ({
             appendLog(`价格上涨了，挂出${submitPrice}`, 'info');
           } else {
             const diff = floor((Number(buyPrice) / Number(sellPrice) - 1) * 100, 2);
-            // 如果下滑超过0.01%，则卖出
-            if (diff > 0.01) {
+            // 如果下滑超过0.1%，则卖出
+            if (diff >= 0.1) {
               submitPrice = sellPrice;
               appendLog(`价格下滑${diff} %，挂出${submitPrice}`, 'info');
             } else {
@@ -245,6 +259,13 @@ export const BicycleMode = ({
             }
           }
           try {
+            // 校验是否还有未卖出
+            const isSell = await getIsSell(tab);
+            if (!isSell) {
+              appendLog('已卖出', 'info');
+              isSuccess = true;
+              break;
+            }
             // 设置卖出价格
             await setPrice(tab, submitPrice);
             // 设置卖出数量
@@ -297,6 +318,13 @@ export const BicycleMode = ({
       }
     }
 
+    // 等待1s
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    // 校验是否有未知弹窗
+    await checkUnknownModal(tab);
+    // 校验是否有未取消的订单
+    await cancelOrder(tab);
+    // 兜底卖出
     await backSell(tab, symbol, appendLog, timeout);
 
     balance = await getBalance(tab);
@@ -310,6 +338,8 @@ export const BicycleMode = ({
     setNum(Date.now());
 
     appendLog('执行结束', 'success');
+
+    if (secret) stopLoopAuth();
 
     setRuning(false);
   };
@@ -331,22 +361,22 @@ export const BicycleMode = ({
       </div>
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
-        <Label htmlFor="timeout" className="w-28 flex-none">
-          挂单超时(秒)
+        <Label htmlFor="count" className="w-28 flex-none">
+          保守设置(检测价格波动次数)
         </Label>
         <Input
           type="text"
-          name="timeout"
-          id="timeout"
-          placeholder={`挂单超时`}
-          defaultValue={orderSetting.timeout ?? '3'}
-          onChange={e => bicycleSettingStorage.setVal({ timeout: e.target.value ?? '' })}
+          name="count"
+          id="count"
+          placeholder="保守设置(检测价格波动次数)"
+          defaultValue={orderSetting.count ?? '3'}
+          onChange={e => bicycleSettingStorage.setVal({ count: e.target.value ?? '' })}
         />
       </div>
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
         <Label htmlFor="checkPriceTime" className="w-28 flex-none">
-          卖出超时时间(秒)
+          挂单超时时间(秒)
         </Label>
         <Input
           type="text"

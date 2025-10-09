@@ -32,9 +32,9 @@ const storage = createStorage<SettingState>(
   'setting-storage-key',
   {
     amount: '',
-    timeout: '3',
+    timeout: '2',
     runNum: '3',
-    count: '3',
+    count: '1',
     dot: '3',
     type: 'Buy',
     mode: 'Reverse',

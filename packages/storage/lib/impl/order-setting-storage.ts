@@ -8,8 +8,6 @@ export type OrderSettingState = {
   timeout: string;
   runNum: string;
   count: string;
-  dot: string;
-  type: 'Buy' | 'Sell';
   // 卖出超时次数(超出次数将以最佳价格卖出止损)
   timeoutCount: string;
   // 下单金额模式 固定金额 随机金额
@@ -29,11 +27,9 @@ const storage = createStorage<OrderSettingState>(
   'order-setting-storage-key',
   {
     amount: '',
-    timeout: '3',
+    timeout: '2',
     runNum: '3',
-    count: '3',
-    dot: '3',
-    type: 'Buy',
+    count: '1',
     timeoutCount: '1',
     orderAmountMode: 'Fixed',
     maxAmount: '100',

@@ -1,5 +1,3 @@
-import { getIsSell } from './tool';
-
 declare global {
   interface Window {
     setInputValue: (selector: string, value: string) => void;
@@ -70,7 +68,7 @@ export const getPrice = async (symbol: string) => {
 
 export const getPriceList = async (symbol: string) => {
   const request = await fetch(
-    `https://www.binance.com/bapi/defi/v1/public/alpha-trade/agg-trades?symbol=${symbol}&limit=50`,
+    `https://www.binance.com/bapi/defi/v1/public/alpha-trade/agg-trades?symbol=${symbol}&limit=15`,
   );
   const json = (await request.json()) as { data: AggTrade[] };
   return json.data;
@@ -182,6 +180,37 @@ export const callSubmit = async (tab: chrome.tabs.Tab) =>
     }
   });
 
+export const callBuySubmit = async (tab: chrome.tabs.Tab) =>
+  await callChromeJs(tab, [], async () => {
+    try {
+      const btn = document.querySelector(
+        '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] button[class="bn-button bn-button__buy data-size-middle w-full"]',
+      ) as HTMLButtonElement;
+      if (!btn) {
+        throw new Error('买入按钮不存在, 刷新页面, 请确认页面是否正确');
+      }
+      btn.click();
+      // 关闭弹窗
+      let count = 0;
+      // 1000 / 30 每秒30fps 最多等待1秒
+      while (count < 32) {
+        await new Promise(resolve => setTimeout(resolve, 1000 / 30));
+        const btn = document
+          .querySelector(`div[role='dialog'][class='bn-modal-wrap data-size-small']`)
+          ?.querySelector('.bn-button__primary') as HTMLButtonElement;
+        if (btn) {
+          btn.click();
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return { error: '', val: false };
+        }
+        count++;
+      }
+      return { error: '操作超时，刷新页面后重试', val: true };
+    } catch (error: any) {
+      return { error: error.message, val: false };
+    }
+  });
+
 // 等待订单完成
 export const waitOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
   await callChromeJs(tab, [timeout], async timeout => {
@@ -189,23 +218,20 @@ export const waitOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
       await new Promise(resolve => setTimeout(resolve, 1000));
       const start = Date.now();
       while (true) {
-        // 检测是否有订单
-        const cancelAll = document.querySelector(
-          '#bn-tab-pane-orderOrder th[aria-colindex="9"] div[class="text-TextLink cursor-pointer"]',
-        ) as HTMLButtonElement;
-        console.log('cancelAll', cancelAll);
-        // 如果不存在则代表未有订单
-        if (!cancelAll) break;
+        // 获取订单
+        const orderList = Array.from(document.querySelectorAll('#bn-tab-pane-orderOrder .bn-web-table-row'));
+        if (orderList.length === 0) break;
         // 如果存在 且超时操作取消 并且返回超时 timeout 单位（s）
         if (Date.now() - start > timeout * 1000) {
-          cancelAll.click();
-          await new Promise(resolve => setTimeout(resolve, 16));
-          // 确认弹窗
-          const btn = document.querySelector(
-            '.bn-modal-confirm .bn-modal-confirm-actions .bn-button__primary',
-          ) as HTMLButtonElement;
-          if (btn) btn.click();
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          orderList.forEach(order => {
+            const evt = new MouseEvent('click', {
+              bubbles: true,
+              cancelable: true,
+              view: window,
+            });
+            order.querySelector('td[aria-colindex="9"] svg')?.dispatchEvent(evt);
+          });
+          await new Promise(resolve => setTimeout(resolve, 500));
           return { error: '等待订单超时，等待重试', val: true };
         }
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -230,6 +256,43 @@ export const isAuthModal = async (tab: chrome.tabs.Tab) =>
     }
   });
 
+// 检测是否有卖单
+export const getIsSell = async (tab: chrome.tabs.Tab) =>
+  await callChromeJs(tab, [], async () => {
+    try {
+      const sellPanel = document.querySelector('.bn-tab__buySell[aria-controls="bn-tab-pane-1"]') as HTMLButtonElement;
+      if (!sellPanel) {
+        throw new Error('卖出面板元素不存在, 刷新页面, 请确认页面是否正确');
+      }
+      sellPanel.click();
+      await new Promise(resolve => setTimeout(resolve, 300));
+      sellPanel.click();
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const priceEl = document.querySelector(
+        `.ReactVirtualized__List div[class='flex-1 cursor-pointer']`,
+      ) as HTMLSpanElement;
+      if (!priceEl) throw new Error('价格元素不存在, 刷新页面, 请确认页面是否正确');
+      const sellPrice = priceEl.textContent.trim();
+      window.setInputValue('input#limitPrice', sellPrice);
+      await new Promise(resolve => setTimeout(resolve, 16));
+      window.setInputValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
+      await new Promise(resolve => setTimeout(resolve, 16));
+      const error = document.querySelector('div.bn-textField__line.data-error')?.querySelector('#limitTotal');
+      if (error) {
+        return { error: '', val: true };
+      }
+      const input = document.querySelector(
+        '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal',
+      ) as HTMLInputElement;
+      if (!input) throw new Error('数量输入框不存在, 刷新页面, 请确认页面是否正确');
+      if (Number(input.value) >= 1) return { error: '', val: true };
+      return { error: '', val: false };
+    } catch (error: any) {
+      return { error: error.message, val: true };
+    }
+  });
+
 // 兜底卖出
 export const backSell = async (
   tab: chrome.tabs.Tab,
@@ -241,11 +304,11 @@ export const backSell = async (
     try {
       const isSell = await getIsSell(tab);
       if (!isSell) return;
-      await jumpToSell(tab); // 跳转卖出
+      // await jumpToSell(tab); // 跳转卖出
       const price = await getPrice(symbol); // 获取价格
       if (!price) throw new Error('获取价格失败');
       // 设置卖出价格
-      await setPrice(tab, price);
+      await setPrice(tab, (Number(price) - Number(price) * 0.01).toString());
       // 设置卖出数量
       await setRangeValue(tab, '100');
       // 执行卖出
@@ -404,11 +467,98 @@ export const cancelOrder = async (tab: chrome.tabs.Tab) =>
     const cancelAll = document.querySelector(
       '#bn-tab-pane-orderOrder th[aria-colindex="9"] div[class="text-TextLink cursor-pointer"]',
     ) as HTMLButtonElement;
-    console.log('cancelAll', cancelAll);
     // 如果不存在则代表未有订单
     if (cancelAll) {
       cancelAll.click();
       await new Promise(resolve => setTimeout(resolve, 300));
+      // 确认弹窗
+      const btn = document.querySelector(
+        '.bn-modal-confirm .bn-modal-confirm-actions .bn-button__primary',
+      ) as HTMLButtonElement;
+      if (btn) btn.click();
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
+
+    const orderList = Array.from(
+      document.querySelectorAll('#bn-tab-pane-orderOrder td div[style="color: var(--color-Buy);'),
+    );
+    if (orderList.length) {
+      // 如果存在 且超时操作取消 并且返回超时 timeout 单位（s）
+      orderList.forEach(order => {
+        const evt = new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+        });
+        order.querySelector('td[aria-colindex="9"] svg')?.dispatchEvent(evt);
+      });
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
     return { error: '', val: true };
+  });
+
+export const openReverseOrder = async (tab: chrome.tabs.Tab) =>
+  await callChromeJs(tab, [], () => {
+    try {
+      // 反向订单校验
+      const btn = document.querySelector(
+        '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .bn-checkbox',
+      ) as HTMLButtonElement;
+      if (btn) {
+        const isChecked = btn.getAttribute('aria-checked') === 'true';
+        // 点击反向按钮
+        if (!isChecked) btn.click();
+      }
+      return { error: '', val: true };
+    } catch (error: any) {
+      return { error: error.message, val: false };
+    }
+  });
+export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) =>
+  await callChromeJs(tab, [price], async price => {
+    try {
+      const limitTotals = document.querySelectorAll('input#limitTotal');
+      if (!limitTotals.length || limitTotals.length < 2) throw new Error('反向价格元素不存在, 请确认页面是否正确');
+      const limitTotal = limitTotals[1] as any;
+      // 卖出价格
+      window.setInputValue(limitTotal, price);
+      await new Promise(resolve => setTimeout(resolve, 16));
+      return { error: '', val: true };
+    } catch (error: any) {
+      return { error: error.message, val: false };
+    }
+  });
+
+export const waitBuyOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
+  await callChromeJs(tab, [timeout], async timeout => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const start = Date.now();
+      while (true) {
+        // 获取订单
+        const orderList = Array.from(
+          document.querySelectorAll('#bn-tab-pane-orderOrder td div[style="color: var(--color-Buy);'),
+        );
+        if (orderList.length === 0) break;
+        // 如果存在 且超时操作取消 并且返回超时 timeout 单位（s）
+        if (Date.now() - start > timeout * 1000) {
+          orderList.forEach(order => {
+            const evt = new MouseEvent('click', {
+              bubbles: true,
+              cancelable: true,
+              view: window,
+            });
+            order.parentNode?.parentNode?.querySelector('svg')?.dispatchEvent(evt);
+          });
+          console.log('等待订单超时，等待重试');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return { error: '等待订单超时，等待重试', val: true };
+        }
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      return { error: '', val: true };
+    } catch (error: any) {
+      return { error: error.message, val: false };
+    }
   });
