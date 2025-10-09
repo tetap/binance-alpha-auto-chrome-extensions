@@ -1,8 +1,15 @@
+declare global {
+  interface Window {
+    setInputValue(selector: string, value: string): void;
+  }
+}
+
 // 获取价格
 export const getPrice = async (tab: chrome.tabs.Tab, type: 'Buy' | 'Sell') => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
     args: [type],
+    world: 'MAIN',
     func: async type => {
       try {
         const priceEl = document.querySelector(`.ReactVirtualized__List [style*="--color-${type}"]`) as HTMLSpanElement;
@@ -27,19 +34,11 @@ export const getPrice = async (tab: chrome.tabs.Tab, type: 'Buy' | 'Sell') => {
 export const setPrice = async (tab: chrome.tabs.Tab, price: string) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     args: [price],
     func: price => {
       try {
-        const limitPrice = document.querySelector('input#limitPrice') as any;
-        if (!limitPrice) throw new Error('成交价格元素不存在, 请确认页面是否正确');
-        limitPrice.value = price;
-        const tracker1 = limitPrice._valueTracker;
-        if (tracker1) {
-          tracker1.setValue(limitPrice.value);
-        }
-        limitPrice.dispatchEvent(new Event('input', { bubbles: true }));
-        limitPrice.dispatchEvent(new Event('change', { bubbles: true }));
-
+        window.setInputValue('input#limitPrice', price);
         return { error: '' };
       } catch (err) {
         return { error: String(err) };
@@ -58,6 +57,7 @@ export const setPrice = async (tab: chrome.tabs.Tab, price: string) => {
 export const getBalance = async (tab: chrome.tabs.Tab) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     func: async () => {
       try {
         const buyPanel = document.querySelector('.bn-tab__buySell[aria-controls="bn-tab-pane-0"]') as HTMLButtonElement;
@@ -89,18 +89,11 @@ export const getBalance = async (tab: chrome.tabs.Tab) => {
 export const setAmount = async (tab: chrome.tabs.Tab, amount: number) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     args: [amount],
     func: amount => {
       try {
-        const limitTotal = document.querySelector('input#limitTotal') as any;
-        if (!limitTotal) throw new Error('limitTotal元素不存在, 请确认页面是否正确');
-        limitTotal.value = amount;
-        const tracker1 = limitTotal._valueTracker;
-        if (tracker1) {
-          tracker1.setValue(limitTotal.value);
-        }
-        limitTotal.dispatchEvent(new Event('input', { bubbles: true }));
-        limitTotal.dispatchEvent(new Event('change', { bubbles: true }));
+        window.setInputValue('input#limitTotal', amount.toString());
         return { error: '' };
       } catch (err) {
         return { error: String(err) };
@@ -119,6 +112,7 @@ export const setAmount = async (tab: chrome.tabs.Tab, amount: number) => {
 export const triggerBuy = async (tab: chrome.tabs.Tab) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     func: () => {
       try {
         const btn = document.querySelector(
@@ -146,6 +140,7 @@ export const triggerBuy = async (tab: chrome.tabs.Tab) => {
 export const checkBuy = async (tab: chrome.tabs.Tab) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     func: async () => {
       try {
         let count = 0;
@@ -179,6 +174,7 @@ export const checkBuy = async (tab: chrome.tabs.Tab) => {
 export const checkReverseOrder = async (tab: chrome.tabs.Tab) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     func: () => {
       try {
         const btn = document.querySelector(
@@ -209,19 +205,14 @@ export const checkReverseOrder = async (tab: chrome.tabs.Tab) => {
 export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     args: [price],
     func: price => {
       try {
         const limitTotals = document.querySelectorAll('input#limitTotal');
         if (!limitTotals.length || limitTotals.length < 2) throw new Error('反向价格元素不存在, 请确认页面是否正确');
         const limitTotal = limitTotals[1] as any;
-        limitTotal.value = price;
-        const tracker1 = limitTotal._valueTracker;
-        if (tracker1) {
-          tracker1.setValue(limitTotal.value);
-        }
-        limitTotal.dispatchEvent(new Event('input', { bubbles: true }));
-        limitTotal.dispatchEvent(new Event('change', { bubbles: true }));
+        window.setInputValue(limitTotal, price);
         return { error: '' };
       } catch (err) {
         return { error: String(err) };
@@ -240,6 +231,7 @@ export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) => {
 export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     args: [timeout],
     func: async timeout => {
       try {
@@ -326,32 +318,18 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
           const price = priceEl.textContent.trim();
 
           // 设置卖出价格
-          const limitPrice = document.querySelector('input#limitPrice') as any;
-          if (!limitPrice) throw new Error('成交价格元素不存在, 请确认页面是否正确');
-          limitPrice.value = price;
-          const tracker2 = limitPrice._valueTracker;
-          if (tracker2) {
-            tracker2.setValue(limitPrice.value);
-          }
-          limitPrice.dispatchEvent(new Event('input', { bubbles: true }));
-          limitPrice.dispatchEvent(new Event('change', { bubbles: true }));
+          window.setInputValue('input#limitPrice', price);
           // 设置金额
           let sider_count = 0;
           while (true) {
             const sider = document.querySelector(
               '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]',
-            ) as any;
+            ) as HTMLInputElement;
             if (!sider) throw new Error('补救卖出面板滑块不存在, 请确认页面是否正确');
-            sider.value = '100';
-            const tracker1 = sider._valueTracker;
-            if (tracker1) {
-              tracker1.setValue(sider.value);
-            }
-            sider.dispatchEvent(new Event('input', { bubbles: true }));
-            sider.dispatchEvent(new Event('change', { bubbles: true }));
+            window.setInputValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
             await new Promise(resolve => setTimeout(resolve, 16));
             sider_count++;
-            if (sider.value < 1 && sider_count > 3) {
+            if (Number(sider.value) < 80 && sider_count > 3) {
               throw new Error('金额设置异常，请检查页面是否正确');
             } else {
               break;
@@ -412,6 +390,7 @@ export const checkOrder = async (tab: chrome.tabs.Tab, timeout: number = 3000) =
 export const checkWaterfall = async (tab: chrome.tabs.Tab) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     func: () => {
       try {
         const container = document.querySelector('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] > div');
@@ -542,6 +521,7 @@ export const goToSell = async (
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
     args: [reverse, lastPrice],
+    world: 'MAIN',
     func: async (reverse, lastPrice: string) => {
       try {
         const container = document.querySelector('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] > div');
@@ -603,15 +583,7 @@ export const goToSell = async (
           val = sellPrice;
         }
         // 设置卖出价格
-        const limitPrice = document.querySelector('input#limitPrice') as any;
-        if (!limitPrice) throw new Error('成交价格元素不存在, 请确认页面是否正确');
-        limitPrice.value = sellPrice;
-        const tracker2 = limitPrice._valueTracker;
-        if (tracker2) {
-          tracker2.setValue(limitPrice.value);
-        }
-        limitPrice.dispatchEvent(new Event('input', { bubbles: true }));
-        limitPrice.dispatchEvent(new Event('change', { bubbles: true }));
+        window.setInputValue('input#limitPrice', sellPrice);
         // 设置金额
         let sider_count = 0;
         while (true) {
@@ -619,13 +591,7 @@ export const goToSell = async (
             '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]',
           ) as any;
           if (!sider) throw new Error('卖出面板滑块不存在, 请确认页面是否正确');
-          sider.value = '100';
-          const tracker1 = sider._valueTracker;
-          if (tracker1) {
-            tracker1.setValue(sider.value);
-          }
-          sider.dispatchEvent(new Event('input', { bubbles: true }));
-          sider.dispatchEvent(new Event('change', { bubbles: true }));
+          window.setInputValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
           await new Promise(resolve => setTimeout(resolve, 16));
           sider_count++;
           if (sider.value < 10 && sider_count > 3) {
@@ -675,6 +641,7 @@ export const checkByOrderBuy = async (tab: chrome.tabs.Tab, timeout: number = 3)
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
     args: [timeout],
+    world: 'MAIN',
     func: async timeout => {
       try {
         await new Promise(resolve => setTimeout(resolve, 1100));
@@ -732,6 +699,7 @@ export const checkByOrderSell = async (tab: chrome.tabs.Tab, timeout: number = 3
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
     args: [timeout],
+    world: 'MAIN',
     func: async timeout => {
       try {
         await new Promise(resolve => setTimeout(resolve, 1500));
@@ -784,6 +752,7 @@ export const checkByOrderSell = async (tab: chrome.tabs.Tab, timeout: number = 3
 export const cancelOrder = async (tab: chrome.tabs.Tab) => {
   await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     func: async () => {
       const sell = document.querySelector('#bn-tab-pane-orderOrder td div[style="color: var(--color-Sell);"]');
       if (sell) {
@@ -818,6 +787,7 @@ export const cancelOrder = async (tab: chrome.tabs.Tab) => {
 export const getIsSell = async (tab: chrome.tabs.Tab) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     func: async () => {
       try {
         const sellPanel = document.querySelector(
@@ -834,33 +804,20 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
         if (!priceEl) throw new Error('价格元素不存在, 请确认页面是否正确');
         const sellPrice = priceEl.textContent.trim();
         // 设置卖出价格
-        const limitPrice = document.querySelector('input#limitPrice') as any;
-        if (!limitPrice) throw new Error('成交价格元素不存在, 请确认页面是否正确');
-        limitPrice.value = sellPrice;
-        const tracker2 = limitPrice._valueTracker;
-        if (tracker2) {
-          tracker2.setValue(limitPrice.value);
-        }
-        limitPrice.dispatchEvent(new Event('input', { bubbles: true }));
-        limitPrice.dispatchEvent(new Event('change', { bubbles: true }));
+        window.setInputValue('input#limitPrice', sellPrice);
+        await new Promise(resolve => setTimeout(resolve, 16));
         // 设置金额
         const sider = document.querySelector(
           '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]',
-        ) as any;
+        ) as HTMLInputElement;
         if (!sider) throw new Error('卖出面板滑块不存在, 请确认页面是否正确');
-        sider.value = '100';
-        const tracker1 = sider._valueTracker;
-        if (tracker1) {
-          tracker1.setValue(sider.value);
-        }
-        sider.dispatchEvent(new Event('input', { bubbles: true }));
-        sider.dispatchEvent(new Event('change', { bubbles: true }));
+        window.setInputValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
         await new Promise(resolve => setTimeout(resolve, 16));
         const error = document.querySelector('div.bn-textField__line.data-error')?.querySelector('#limitTotal');
         if (error) {
           return { error: '', val: true };
         }
-        if (sider.value >= 10) {
+        if (Number(sider.value) >= 80) {
           return { error: '', val: true };
         }
         return { error: '', val: false };
@@ -882,6 +839,7 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
 export const checkAmount = async (tab: chrome.tabs.Tab) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     func: async () => {
       try {
         const sellPanel = document.querySelector(
@@ -917,6 +875,7 @@ export const checkAmount = async (tab: chrome.tabs.Tab) => {
 export const checkUnknownModal = async (tab: chrome.tabs.Tab) => {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     func: () => {
       try {
         const modal = document.querySelector(`div[role='dialog'][class='bn-modal-wrap data-size-small']`);
