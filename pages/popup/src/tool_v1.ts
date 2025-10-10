@@ -621,14 +621,14 @@ export const checkMarketStable = async (
 
   // 趋势方向
   let trend: MarketStabilityResult['trend'] = '横盘震荡';
-  if (slope > 0.0001) trend = '上涨趋势';
-  else if (slope < -0.0001) trend = '下跌趋势';
+  if (slope > 0.00001) trend = '上涨趋势';
+  else if (slope < -0.00001) trend = '下跌趋势';
 
   // 可刷分判断
   let stable = false;
   if (trend === '下跌趋势') {
-    // 下降趋势只有波动率超过 0.001 才禁止
-    stable = volatility <= 0.001;
+    // 下降趋势只有波动率超过 0.0001 才禁止
+    stable = volatility <= 0.0001;
   } else {
     // 横盘或上涨都允许刷分
     stable = true;
