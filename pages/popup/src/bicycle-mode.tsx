@@ -216,10 +216,11 @@ export const BicycleMode = ({
         }
 
         appendLog(`获取到买入价格: ${buyPrice}`, 'info');
-        buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // 调整买入价
+        const subPrice =
+          stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // 调整买入价
 
         // 操作写入买入价格
-        await setPrice(tab, buyPrice);
+        await setPrice(tab, subPrice);
         // 计算买入金额
         const amount =
           options.orderAmountMode === 'Fixed'
