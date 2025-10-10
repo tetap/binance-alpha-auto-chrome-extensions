@@ -32,7 +32,6 @@ const manifest = {
   description: '__MSG_extensionDescription__',
   host_permissions: ['<all_urls>'],
   permissions: ['storage', 'scripting', 'tabs', 'notifications', 'sidePanel'],
-  options_page: 'options/index.html',
   background: {
     service_worker: 'background.js',
     type: 'module',
@@ -48,26 +47,10 @@ const manifest = {
     '128': 'icon-128.png',
   },
   content_scripts: [
-    // {
-    //   matches: ['http://*/*', 'https://*/*', '<all_urls>'],
-    //   js: ['content/all.iife.js'],
-    // },
     {
       matches: ['https://www.binance.com/zh-CN/alpha/*'],
       js: ['content/example.iife.js'],
     },
-    // {
-    //   matches: ['http://*/*', 'https://*/*', '<all_urls>'],
-    //   js: ['content-ui/all.iife.js'],
-    // },
-    // {
-    //   matches: ['https://example.com/*'],
-    //   js: ['content-ui/example.iife.js'],
-    // },
-    // {
-    //   matches: ['http://*/*', 'https://*/*', '<all_urls>'],
-    //   css: ['content.css'],
-    // },
   ],
   web_accessible_resources: [
     {
