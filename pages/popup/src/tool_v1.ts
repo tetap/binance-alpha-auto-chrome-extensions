@@ -4,6 +4,37 @@ declare global {
   }
 }
 
+export const injectDependencies = async (tab: chrome.tabs.Tab) => {
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id! },
+    world: 'MAIN',
+    func: () => {
+      window.setInputValue = (selector, value) => {
+        const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
+        if (!input) throw new Error('input元素不存在');
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+        nativeInputValueSetter.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+
+      Object.defineProperty(navigator, 'credentials', {
+        value: {
+          get: async () => {
+            console.warn('[CEB] WebAuthn get disabled by extension');
+            throw new DOMException('WebAuthn disabled by extension', 'NotAllowedError');
+          },
+          create: async () => {
+            console.warn('[CEB] WebAuthn create disabled by extension');
+            throw new DOMException('WebAuthn disabled by extension', 'NotAllowedError');
+          },
+        },
+        configurable: false,
+      });
+    },
+  });
+};
+
 export const callChromeJs = async <T, A extends any[] = []>(
   tab: chrome.tabs.Tab,
   args: A,

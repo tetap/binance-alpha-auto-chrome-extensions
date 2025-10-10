@@ -3,6 +3,7 @@ import { BicycleMode } from './bicycle-mode';
 import { OrderMode } from './order-mode';
 import { ReverseMode } from './reverse-mode';
 import { getBalance } from './tool';
+import { injectDependencies } from './tool_v1';
 import { useLogger } from './useLogger';
 import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
 import { settingStorage, todayDealStorage } from '@extension/storage';
@@ -57,6 +58,7 @@ const Popup = () => {
     (async (setStartBalance, setCurrentBalance, appendLog) => {
       try {
         const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+        injectDependencies(tab);
         const balance = await getBalance(tab);
         setStartBalance(balance);
         setCurrentBalance(balance);
