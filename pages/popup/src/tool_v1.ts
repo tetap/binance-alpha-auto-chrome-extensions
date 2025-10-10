@@ -563,3 +563,89 @@ export const waitBuyOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
       return { error: error.message, val: false };
     }
   });
+
+// =====================
+// Binance K线响应类型
+// =====================
+export interface AlphaKlineResponse {
+  code: string;
+  message: string | null;
+  messageDetail: string | null;
+  success: boolean;
+  data: string[][];
+}
+
+// =====================
+// 市场稳定性返回类型
+// =====================
+export interface MarketStabilityResult {
+  symbol: string;
+  interval: string;
+  volatility: string; // 平均波动率
+  slope: string; // 趋势斜率
+  varVol: string; // 成交量波动系数
+  stable: boolean; // 是否可刷分
+  trend: '上涨趋势' | '下跌趋势' | '横盘震荡';
+  message: string; // 可读提示
+}
+
+export const checkMarketStable = async (
+  symbol = 'ALPHA_175USDT',
+  interval = '1s',
+  limit = 15,
+): Promise<MarketStabilityResult> => {
+  const url = `https://www.binance.com/bapi/defi/v1/public/alpha-trade/klines?interval=${interval}&limit=${limit}&symbol=${symbol}`;
+  const res = await fetch(url);
+  const json: AlphaKlineResponse = await res.json();
+
+  if (!json.success || !Array.isArray(json.data)) {
+    throw new Error(`获取 ${symbol} 市场数据失败`);
+  }
+
+  const data = json.data;
+  const closes = data.map(k => parseFloat(k[4]));
+  const highs = data.map(k => parseFloat(k[2]));
+  const lows = data.map(k => parseFloat(k[3]));
+  const opens = data.map(k => parseFloat(k[1]));
+  const volumes = data.map(k => parseFloat(k[5]));
+
+  // 平均波动率
+  const volatility = highs.reduce((sum, h, i) => sum + (h - lows[i]) / opens[i], 0) / highs.length;
+
+  // 趋势斜率
+  const slope = (closes[closes.length - 1] - closes[0]) / closes[0];
+
+  // 成交量波动系数
+  const avgVol = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+  const varVol = Math.sqrt(volumes.map(v => (v - avgVol) ** 2).reduce((a, b) => a + b, 0) / volumes.length) / avgVol;
+
+  // 趋势方向
+  let trend: MarketStabilityResult['trend'] = '横盘震荡';
+  if (slope > 0.0001) trend = '上涨趋势';
+  else if (slope < -0.0001) trend = '下跌趋势';
+
+  // 可刷分判断
+  let stable = false;
+  if (trend === '下跌趋势') {
+    // 下降趋势只有波动率超过 0.001 才禁止
+    stable = volatility <= 0.001;
+  } else {
+    // 横盘或上涨都允许刷分
+    stable = true;
+  }
+
+  const message = stable
+    ? `✅ 可刷分（${trend} / 波动率:${volatility.toFixed(6)}）`
+    : `⚠️ 暂不建议刷分（${trend} / 波动率:${volatility.toFixed(6)}）`;
+
+  return {
+    symbol,
+    interval,
+    volatility: volatility.toFixed(5),
+    slope: slope.toFixed(5),
+    varVol: varVol.toFixed(3),
+    stable,
+    trend,
+    message,
+  };
+};

@@ -4,12 +4,13 @@ import {
   backSell,
   callSubmit,
   cancelOrder,
+  checkMarketStable,
   checkUnknownModal,
-  detectDropRisk,
+  // detectDropRisk,
   getBalance,
   getId,
   getPrice,
-  getPriceList,
+  // getPriceList,
   isAuthModal,
   jumpToBuy,
   setLimitTotal,
@@ -150,23 +151,35 @@ export const OrderMode = ({
         // 回到买入面板
         await jumpToBuy(tab);
 
-        // 抖动检测
-        const trades = await getPriceList(symbol);
-        console.log('trades', trades);
-        // 获取抖动窗口
-        const priceWindows = detectDropRisk(trades, {
-          buyIndex: 0,
-          windowMs: 10_000,
-          thresholdPct: 0.1,
-          volumeWeighted: true,
-        });
-        appendLog(`价格抖动窗口: 是否买入: ${priceWindows.hasRisk ? '取消' : '买入'};`, 'info');
-        appendLog(`价格抖动窗口: 买入价: ${priceWindows.buyPrice};最低价: ${priceWindows.minPrice};`, 'info');
-        if (priceWindows.hasRisk) {
+        // k线检测
+        const stable = await checkMarketStable(symbol);
+
+        if (!stable.stable) {
+          appendLog(stable.message, 'error');
           i--;
           await new Promise(resolve => setTimeout(resolve, 3000));
           continue;
+        } else {
+          appendLog(stable.message, 'success');
         }
+
+        // 抖动检测
+        // const trades = await getPriceList(symbol);
+        // console.log('trades', trades);
+        // // 获取抖动窗口
+        // const priceWindows = detectDropRisk(trades, {
+        //   buyIndex: 0,
+        //   windowMs: 10_000,
+        //   thresholdPct: 0.1,
+        //   volumeWeighted: true,
+        // });
+        // appendLog(`价格抖动窗口: 是否买入: ${priceWindows.hasRisk ? '取消' : '买入'};`, 'info');
+        // appendLog(`价格抖动窗口: 买入价: ${priceWindows.buyPrice};最低价: ${priceWindows.minPrice};`, 'info');
+        // if (priceWindows.hasRisk) {
+        //   i--;
+        //   await new Promise(resolve => setTimeout(resolve, 3000));
+        //   continue;
+        // }
         let buyPrice = await getPrice(symbol);
         appendLog(`保守设置次数:${count}`, 'info');
         for (let j = 0; j < count; j++) {
@@ -180,7 +193,18 @@ export const OrderMode = ({
           }
         }
         if (!buyPrice) throw new Error('获取价格失败');
+
+        const checkPrice = await getPrice(symbol); // 获取价格
+
+        if (Number(checkPrice) < Number(buyPrice)) {
+          appendLog(`价格${buyPrice}下滑到${checkPrice}，休息一会儿`, 'error');
+          await new Promise(resolve => setTimeout(resolve, 6000));
+          throw new Error(`价格${buyPrice}下滑到${checkPrice}，停止买入`);
+        }
+
         appendLog(`获取到买入价格: ${buyPrice}`, 'info');
+
+        buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // 调整买入价
         // 操作写入买入价格
         await setPrice(tab, buyPrice);
         // 计算买入金额
@@ -193,14 +217,6 @@ export const OrderMode = ({
               ).toString();
         // 设置买入金额
         await setLimitTotal(tab, amount);
-
-        const checkPrice = await getPrice(symbol); // 获取价格
-
-        if (Number(checkPrice) < Number(buyPrice)) {
-          appendLog(`价格${buyPrice}下滑到${checkPrice}，休息一会儿`, 'error');
-          await new Promise(resolve => setTimeout(resolve, 6000));
-          throw new Error(`价格${buyPrice}下滑到${checkPrice}，停止买入`);
-        }
 
         // 操作确认买入
         await callSubmit(tab);
@@ -225,7 +241,7 @@ export const OrderMode = ({
         await backSell(tab, symbol, appendLog, timeout);
 
         // 等待2s
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         // 刷新余额
         const balance = await getBalance(tab);
