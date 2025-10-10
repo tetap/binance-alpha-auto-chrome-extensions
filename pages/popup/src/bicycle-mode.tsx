@@ -27,18 +27,9 @@ import dayjs, { extend } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { floor } from 'lodash-es';
 import { useRef } from 'react';
+import type { IPanelProps } from './type';
 
 extend(utc);
-
-export interface IOrderModeProps {
-  setCurrentBalance: (balance: string) => void;
-  startBalance: string;
-  setStartBalance: (balance: string) => void;
-  runing: boolean;
-  setRuning: (runing: boolean) => void;
-  appendLog: (msg: string, type: 'success' | 'error' | 'info') => void;
-  setNum: (num: number) => void;
-}
 
 export const BicycleMode = ({
   setCurrentBalance,
@@ -48,7 +39,8 @@ export const BicycleMode = ({
   setRuning,
   appendLog,
   setNum,
-}: IOrderModeProps) => {
+  api,
+}: IPanelProps) => {
   const stopRef = useRef(false);
   const orderSetting = useStorage(bicycleSettingStorage);
 
@@ -114,7 +106,7 @@ export const BicycleMode = ({
 
     const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
 
-    const symbol = await getId(tab).catch(() => ''); // 获取货币id
+    const symbol = await getId(tab, api).catch(() => ''); // 获取货币id
 
     if (!symbol) {
       appendLog('获取货币id失败', 'error');
@@ -161,11 +153,11 @@ export const BicycleMode = ({
         // 校验是否有未取消的订单
         await cancelOrder(tab);
         // 兜底卖出
-        await backSell(tab, symbol, appendLog, timeout);
+        await backSell(tab, api, symbol, appendLog, timeout);
         // 回到买入面板
         await jumpToBuy(tab);
 
-        const stable = await checkMarketStable(symbol);
+        const stable = await checkMarketStable(api, symbol);
 
         if (!stable.stable) {
           appendLog(stable.message, 'error');
@@ -193,12 +185,12 @@ export const BicycleMode = ({
         //   await new Promise(resolve => setTimeout(resolve, 3000));
         //   continue;
         // }
-        let buyPrice = await getPrice(symbol);
+        let buyPrice = await getPrice(symbol, api);
         appendLog(`保守设置次数:${count}`, 'info');
         for (let j = 0; j < count; j++) {
           await new Promise(resolve => setTimeout(resolve, 500));
           // 获取买入价
-          const curPrice = await getPrice(symbol); // 获取价格
+          const curPrice = await getPrice(symbol, api); // 获取价格
           appendLog(`当前价格：${curPrice}`, 'info');
           if (Number(curPrice) < Number(buyPrice)) {
             buyPrice = curPrice;
@@ -207,7 +199,7 @@ export const BicycleMode = ({
         }
         if (!buyPrice) throw new Error('获取价格失败');
 
-        const checkPrice = await getPrice(symbol); // 获取价格
+        const checkPrice = await getPrice(symbol, api); // 获取价格
 
         if (Number(checkPrice) < Number(buyPrice)) {
           appendLog(`价格${buyPrice}下滑到${checkPrice}，休息一会儿`, 'error');
@@ -257,7 +249,7 @@ export const BicycleMode = ({
         while (sellCount < timeoutCount) {
           let submitPrice = buyPrice;
           // 获取价格
-          const sellPrice = await getPrice(symbol); // 获取价格
+          const sellPrice = await getPrice(symbol, api); // 获取价格
           if (!sellPrice) throw new Error('获取价格失败');
 
           appendLog(`当前价格：${sellPrice}`, 'info');
@@ -305,7 +297,7 @@ export const BicycleMode = ({
         while (!isSuccess) {
           appendLog('卖出超时，止损卖出', 'error');
           try {
-            await backSell(tab, symbol, appendLog, timeout);
+            await backSell(tab, api, symbol, appendLog, timeout);
             isSuccess = true;
           } catch (error: any) {
             appendLog(error.message, 'error');
@@ -342,7 +334,7 @@ export const BicycleMode = ({
     // 校验是否有未取消的订单
     await cancelOrder(tab);
     // 兜底卖出
-    await backSell(tab, symbol, appendLog, timeout);
+    await backSell(tab, api, symbol, appendLog, timeout);
 
     balance = await getBalance(tab);
 

@@ -61,7 +61,7 @@ export const callChromeJs = async <T, A extends any[] = []>(
 };
 
 // 获取alpha 接口id
-export const getId = async (tab: chrome.tabs.Tab) => {
+export const getId = async (tab: chrome.tabs.Tab, api: string) => {
   const name = await callChromeJs(tab, [], () => {
     try {
       const dom = document.querySelector('.bg-BasicBg .text-PrimaryText');
@@ -71,9 +71,8 @@ export const getId = async (tab: chrome.tabs.Tab) => {
     }
   });
   if (!name) return '';
-  const listRequest = await fetch(
-    'https://www.binance.com/bapi/defi/v1/public/wallet-direct/buw/wallet/cex/alpha/all/token/list',
-  );
+  api = api.lastIndexOf('/') === api.length - 1 ? api.slice(0, -1) : api;
+  const listRequest = await fetch(`${api}/bapi/defi/v1/public/wallet-direct/buw/wallet/cex/alpha/all/token/list`);
   const list = (await listRequest.json()).data as { alphaId: string; symbol: string }[];
   const cur = list.find(c => c.symbol === name);
   if (!cur) return '';
@@ -88,19 +87,17 @@ export interface Trade {
 }
 
 // 获取价格
-export const getPrice = async (symbol: string) => {
-  const request = await fetch(
-    `https://www.binance.com/bapi/defi/v1/public/alpha-trade/agg-trades?symbol=${symbol}&limit=1`,
-  );
+export const getPrice = async (symbol: string, api: string) => {
+  api = api.lastIndexOf('/') === api.length - 1 ? api.slice(0, -1) : api;
+  const request = await fetch(`${api}/bapi/defi/v1/public/alpha-trade/agg-trades?symbol=${symbol}&limit=1`);
   const json = (await request.json()) as { data: Trade[] };
   const cur = json.data[json.data.length - 1];
   return cur.p;
 };
 
-export const getPriceList = async (symbol: string) => {
-  const request = await fetch(
-    `https://www.binance.com/bapi/defi/v1/public/alpha-trade/agg-trades?symbol=${symbol}&limit=15`,
-  );
+export const getPriceList = async (symbol: string, api: string) => {
+  api = api.lastIndexOf('/') === api.length - 1 ? api.slice(0, -1) : api;
+  const request = await fetch(`${api}/bapi/defi/v1/public/alpha-trade/agg-trades?symbol=${symbol}&limit=15`);
   const json = (await request.json()) as { data: AggTrade[] };
   return json.data;
 };
@@ -327,6 +324,7 @@ export const getIsSell = async (tab: chrome.tabs.Tab) =>
 // 兜底卖出
 export const backSell = async (
   tab: chrome.tabs.Tab,
+  api: string,
   symbol: string,
   appendLog: (msg: string, type: 'success' | 'error' | 'info') => void,
   timeout: number = 3,
@@ -336,7 +334,7 @@ export const backSell = async (
       const isSell = await getIsSell(tab);
       if (!isSell) return;
       // await jumpToSell(tab); // 跳转卖出
-      const price = await getPrice(symbol); // 获取价格
+      const price = await getPrice(symbol, api); // 获取价格
       if (!price) throw new Error('获取价格失败');
       const sellPrice = (Number(price) - Number(price) * 0.0001).toString();
       // 设置卖出价格
@@ -621,11 +619,13 @@ export interface MarketStabilityResult {
 }
 
 export const checkMarketStable = async (
-  symbol = 'ALPHA_175USDT',
+  api: string,
+  symbol: string, // ALPHA_175USDT
   interval = '1s',
   limit = 15,
 ): Promise<MarketStabilityResult> => {
-  const url = `https://www.binance.com/bapi/defi/v1/public/alpha-trade/klines?interval=${interval}&limit=${limit}&symbol=${symbol}`;
+  api = api.lastIndexOf('/') === api.length - 1 ? api.slice(0, -1) : api;
+  const url = `${api}/bapi/defi/v1/public/alpha-trade/klines?interval=${interval}&limit=${limit}&symbol=${symbol}`;
   const res = await fetch(url);
   const json: AlphaKlineResponse = await res.json();
 

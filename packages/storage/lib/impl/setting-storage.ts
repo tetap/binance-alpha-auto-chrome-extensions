@@ -21,6 +21,8 @@ export type SettingState = {
   minAmount: string;
   // 二次验证(secret)
   secret: string;
+  // api地址
+  api: string;
 };
 
 // eslint-disable-next-line import-x/exports-last
@@ -43,6 +45,7 @@ const storage = createStorage<SettingState>(
     maxAmount: '100',
     minAmount: '50',
     secret: '',
+    api: 'https://www.binance.com',
   },
   {
     storageEnum: StorageEnum.Local,

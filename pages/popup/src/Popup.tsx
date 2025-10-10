@@ -102,6 +102,19 @@ const Popup = () => {
             />
           </div>
 
+          <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
+            <Label htmlFor="api" className="w-28 flex-none">
+              API地址
+            </Label>
+            <Input
+              name="api"
+              id="api"
+              placeholder="如果可以访问就不要改"
+              defaultValue={setting.api ?? 'https://www.binance.com'}
+              onChange={e => settingStorage.setVal({ api: e.target.value ?? '' })}
+            />
+          </div>
+
           <div className={cn(runing ? 'cursor-not-allowed' : '')}>
             <div className={cn(runing ? 'pointer-events-none' : '')}>
               <Tabs
@@ -122,6 +135,7 @@ const Popup = () => {
                     runing={runing}
                     appendLog={appendLog}
                     setNum={setNum}
+                    api={setting.api || 'https://www.binance.com'}
                   />
                 </TabsContent>
                 <TabsContent value="Order">
@@ -133,6 +147,7 @@ const Popup = () => {
                     runing={runing}
                     appendLog={appendLog}
                     setNum={setNum}
+                    api={setting.api || 'https://www.binance.com'}
                   />
                 </TabsContent>
                 <TabsContent value="Bicycle">
@@ -144,6 +159,7 @@ const Popup = () => {
                     runing={runing}
                     appendLog={appendLog}
                     setNum={setNum}
+                    api={setting.api || 'https://www.binance.com'}
                   />
                 </TabsContent>
               </Tabs>
