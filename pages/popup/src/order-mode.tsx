@@ -10,6 +10,7 @@ import {
   getBalance,
   getId,
   getPrice,
+  injectDependencies,
   // getPriceList,
   isAuthModal,
   jumpToBuy,
@@ -94,6 +95,8 @@ export const OrderMode = ({
     setRuning(true);
 
     const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+
+    injectDependencies(tab);
 
     const symbol = await getId(tab, api).catch(() => ''); // 获取货币id
 

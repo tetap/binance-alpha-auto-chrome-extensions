@@ -19,6 +19,7 @@ import {
   cancelOrder,
   checkUnknownModal,
   checkMarketStable,
+  injectDependencies,
 } from './tool_v1';
 import { useStorage } from '@extension/shared';
 import { bicycleSettingStorage, settingStorage, todayDealStorage } from '@extension/storage';
@@ -105,6 +106,8 @@ export const BicycleMode = ({
     setRuning(true);
 
     const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+
+    injectDependencies(tab);
 
     const symbol = await getId(tab, api).catch(() => ''); // 获取货币id
 
