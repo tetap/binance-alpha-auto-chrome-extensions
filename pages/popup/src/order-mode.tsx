@@ -96,8 +96,6 @@ export const OrderMode = ({
 
     const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
 
-    injectDependencies(tab);
-
     const symbol = await getId(tab, api).catch(() => ''); // 获取货币id
 
     if (!symbol) {
@@ -128,6 +126,8 @@ export const OrderMode = ({
       setStartBalance(balance);
     }
     for (let i = 0; i < runNum; i++) {
+      injectDependencies(tab);
+
       if (stopRef.current) {
         appendLog(`意外终止`, 'error');
         break;
@@ -199,6 +199,7 @@ export const OrderMode = ({
 
         appendLog(`获取到买入价格: ${buyPrice}`, 'info');
 
+        // buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.001).toString() : buyPrice; // 调整买入价
         buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // 调整买入价
         // 操作写入买入价格
         await setPrice(tab, buyPrice);

@@ -336,6 +336,7 @@ export const backSell = async (
       // await jumpToSell(tab); // 跳转卖出
       const price = await getPrice(symbol, api); // 获取价格
       if (!price) throw new Error('获取价格失败');
+      // const sellPrice = (Number(price) - Number(price) * 0.0001).toString();
       const sellPrice = (Number(price) - Number(price) * 0.00006).toString();
       // 设置卖出价格
       await setPrice(tab, sellPrice);

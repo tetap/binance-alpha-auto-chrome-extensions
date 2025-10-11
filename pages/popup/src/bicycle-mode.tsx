@@ -107,8 +107,6 @@ export const BicycleMode = ({
 
     const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
 
-    injectDependencies(tab);
-
     const symbol = await getId(tab, api).catch(() => ''); // 获取货币id
 
     if (!symbol) {
@@ -143,6 +141,8 @@ export const BicycleMode = ({
     }
 
     for (let i = 0; i < runNum; i++) {
+      injectDependencies(tab);
+
       if (stopRef.current) {
         appendLog(`意外终止`, 'error');
         break;
