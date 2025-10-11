@@ -336,7 +336,7 @@ export const backSell = async (
       // await jumpToSell(tab); // 跳转卖出
       const price = await getPrice(symbol, api); // 获取价格
       if (!price) throw new Error('获取价格失败');
-      const sellPrice = (Number(price) - Number(price) * 0.0001).toString();
+      const sellPrice = (Number(price) - Number(price) * 0.00006).toString();
       // 设置卖出价格
       await setPrice(tab, sellPrice);
       // 设置卖出数量
@@ -643,25 +643,45 @@ export const checkMarketStable = async (
   // 平均波动率
   const volatility = highs.reduce((sum, h, i) => sum + (h - lows[i]) / opens[i], 0) / highs.length;
 
-  // 趋势斜率
-  const slope = (closes[closes.length - 1] - closes[0]) / closes[0];
-
   // 成交量波动系数
   const avgVol = volumes.reduce((a, b) => a + b, 0) / volumes.length;
   const varVol = Math.sqrt(volumes.map(v => (v - avgVol) ** 2).reduce((a, b) => a + b, 0) / volumes.length) / avgVol;
 
-  // 趋势方向
+  // =====================
+  // 滑动平均 + 加权 + 成交量确认
+  // =====================
+  const half = Math.floor(closes.length / 2);
+
+  // 前半段普通平均
+  const avgEarly = closes.slice(0, half).reduce((a, b) => a + b, 0) / half;
+
+  // 后半段加权平均，最新K线权重更大
+  const lateCloses = closes.slice(half);
+  const lateWeights = lateCloses.map((_, i) => i + 1);
+  const weightedLate =
+    lateCloses.reduce((sum, price, i) => sum + price * lateWeights[i], 0) / lateWeights.reduce((a, b) => a + b, 0);
+
+  // 均价斜率
+  const slope = (weightedLate - avgEarly) / avgEarly;
+
+  // 成交量确认
+  const volEarly = volumes.slice(0, half).reduce((a, b) => a + b, 0) / half;
+  const volLate = volumes.slice(half).reduce((a, b) => a + b, 0) / (closes.length - half);
+  const volRatio = volLate / volEarly;
+
+  // 趋势方向（上下阈值分开）
   let trend: MarketStabilityResult['trend'] = '横盘震荡';
-  if (slope > 0.00001) trend = '上涨趋势';
-  else if (slope < -0.00001) trend = '下跌趋势';
+  const upThreshold = 0.0000025; // 上涨阈值
+  const downThreshold = 0.000002; // 下跌阈值
+
+  if (slope > upThreshold && volRatio > 0.8) trend = '上涨趋势';
+  else if (slope < -downThreshold && volRatio > 0.8) trend = '下跌趋势';
 
   // 可刷分判断
   let stable = false;
   if (trend === '下跌趋势') {
-    // 下降趋势只有波动率超过 0.0001 才禁止
     stable = volatility <= 0.0001;
   } else {
-    // 横盘或上涨都允许刷分
     stable = true;
   }
 
@@ -673,7 +693,7 @@ export const checkMarketStable = async (
     symbol,
     interval,
     volatility: volatility.toFixed(5),
-    slope: slope.toFixed(5),
+    slope: slope.toFixed(7), // 保留更多小数
     varVol: varVol.toFixed(3),
     stable,
     trend,

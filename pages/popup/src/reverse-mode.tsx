@@ -188,13 +188,13 @@ export const ReverseMode = ({
         }
         if (!buyPrice) throw new Error('获取价格失败');
 
-        const checkPrice = await getPrice(symbol, api); // 获取价格
+        // const checkPrice = await getPrice(symbol, api); // 获取价格
 
-        if (Number(checkPrice) < Number(buyPrice)) {
-          appendLog(`价格${buyPrice}下滑到${checkPrice}，休息一会儿`, 'error');
-          await new Promise(resolve => setTimeout(resolve, 6000));
-          throw new Error(`价格${buyPrice}下滑到${checkPrice}，停止买入`);
-        }
+        // if (Number(checkPrice) < Number(buyPrice)) {
+        //   appendLog(`价格${buyPrice}下滑到${checkPrice}，休息一会儿`, 'error');
+        //   await new Promise(resolve => setTimeout(resolve, 6000));
+        //   throw new Error(`价格${buyPrice}下滑到${checkPrice}，停止买入`);
+        // }
 
         appendLog(`获取到买入价格: ${buyPrice}`, 'info');
 
