@@ -20,6 +20,7 @@ import {
   checkUnknownModal,
   checkMarketStable,
   injectDependencies,
+  closeReverseOrder,
 } from './tool_v1';
 import { useStorage } from '@extension/shared';
 import { bicycleSettingStorage, settingStorage, todayDealStorage } from '@extension/storage';
@@ -214,7 +215,8 @@ export const BicycleMode = ({
         appendLog(`获取到买入价格: ${buyPrice}`, 'info');
         const subPrice =
           stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // 调整买入价
-
+        // 关闭反向订单
+        await closeReverseOrder(tab);
         // 操作写入买入价格
         await setPrice(tab, subPrice);
         // 计算买入金额
@@ -279,6 +281,8 @@ export const BicycleMode = ({
               isSuccess = true;
               break;
             }
+            // 关闭反向订单
+            await closeReverseOrder(tab);
             // 设置卖出价格
             await setPrice(tab, submitPrice);
             // 设置卖出数量

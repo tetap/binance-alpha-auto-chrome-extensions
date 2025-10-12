@@ -205,6 +205,9 @@ export const ReverseMode = ({
 
         buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // 调整买入价
 
+        // 开启反向订单
+        await openReverseOrder(tab);
+
         // 操作写入买入价格
         await setPrice(tab, buyPrice);
         // 计算买入金额
@@ -217,8 +220,6 @@ export const ReverseMode = ({
               ).toString();
         // 设置买入金额
         await setLimitTotal(tab, amount);
-
-        await openReverseOrder(tab);
 
         // 设想反向订单价格
         const num = parseFloat(buyPrice);

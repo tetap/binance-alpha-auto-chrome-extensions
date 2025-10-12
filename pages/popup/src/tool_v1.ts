@@ -135,15 +135,6 @@ export const jumpToBuy = async (tab: chrome.tabs.Tab) =>
 export const setPrice = async (tab: chrome.tabs.Tab, price: string) =>
   await callChromeJs(tab, [price], async price => {
     try {
-      // 反向订单校验
-      const btn = document.querySelector(
-        '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .bn-checkbox',
-      ) as HTMLButtonElement;
-      if (btn) {
-        const isChecked = btn.getAttribute('aria-checked') === 'true';
-        // 点击反向按钮
-        if (isChecked) btn.click();
-      }
       // 卖出价格
       window.setInputValue('input#limitPrice', price);
       await new Promise(resolve => setTimeout(resolve, 16));
@@ -338,6 +329,7 @@ export const backSell = async (
       if (!price) throw new Error('获取价格失败');
       // const sellPrice = (Number(price) - Number(price) * 0.0001).toString();
       const sellPrice = (Number(price) - Number(price) * 0.00006).toString();
+      await closeReverseOrder(tab); // 关闭反向订单
       // 设置卖出价格
       await setPrice(tab, sellPrice);
       // 设置卖出数量
@@ -527,6 +519,24 @@ export const cancelOrder = async (tab: chrome.tabs.Tab) =>
     }
 
     return { error: '', val: true };
+  });
+
+export const closeReverseOrder = async (tab: chrome.tabs.Tab) =>
+  await callChromeJs(tab, [], () => {
+    try {
+      // 反向订单校验
+      const btn = document.querySelector(
+        '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .bn-checkbox',
+      ) as HTMLButtonElement;
+      if (btn) {
+        const isChecked = btn.getAttribute('aria-checked') === 'true';
+        // 点击反向按钮
+        if (isChecked) btn.click();
+      }
+      return { error: '', val: true };
+    } catch (error: any) {
+      return { error: error.message, val: false };
+    }
   });
 
 export const openReverseOrder = async (tab: chrome.tabs.Tab) =>
