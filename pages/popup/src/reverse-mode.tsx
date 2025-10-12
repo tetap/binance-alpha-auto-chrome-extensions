@@ -128,7 +128,9 @@ export const ReverseMode = ({
     if (!startBalance) {
       setStartBalance(balance);
     }
+    let index = 0;
     for (let i = 0; i < runNum; i++) {
+      index++;
       injectDependencies(tab);
 
       if (stopRef.current) {
@@ -265,6 +267,9 @@ export const ReverseMode = ({
       } catch (error: any) {
         appendLog(error.message, 'error');
         if (error.message.includes('刷新页面')) {
+          if (tab.id) await chrome.tabs.reload(tab.id);
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        } else if (index % 10 === 0) {
           if (tab.id) await chrome.tabs.reload(tab.id);
           await new Promise(resolve => setTimeout(resolve, 5000));
         }
