@@ -105,9 +105,14 @@ export const OrderMode = ({
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    const options = await getOptions(e);
+    if (runing) {
+      stopRef.current = true;
+      appendLog('正在停止中，请等待本次执行完成', 'info');
+      e.preventDefault();
+      return;
+    }
 
-    if (runing) return;
+    const options = await getOptions(e);
 
     stopRef.current = false;
 
@@ -324,6 +329,7 @@ export const OrderMode = ({
           type="text"
           name="count"
           id="count"
+          disabled={runing}
           placeholder="保守设置(检测价格波动次数)"
           defaultValue={orderSetting.count ?? '3'}
           onChange={e => orderSettingStorage.setVal({ count: e.target.value ?? '' })}
@@ -338,6 +344,7 @@ export const OrderMode = ({
           type="text"
           name="timeout"
           id="timeout"
+          disabled={runing}
           placeholder={`挂单超时`}
           defaultValue={orderSetting.timeout ?? '3'}
           onChange={e => orderSettingStorage.setVal({ timeout: e.target.value ?? '' })}
@@ -348,6 +355,7 @@ export const OrderMode = ({
         <Label className="w-28 flex-none">下单金额模式</Label>
         <RadioGroup
           name="orderAmountMode"
+          disabled={runing}
           defaultValue={orderSetting.orderAmountMode ?? 'Fixed'}
           className="flex items-center gap-4"
           onValueChange={value => orderSettingStorage.setVal({ orderAmountMode: value as 'Fixed' | 'Random' })}>
@@ -378,6 +386,7 @@ export const OrderMode = ({
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
+          disabled={runing}
           spellCheck={false}
           type="text"
           name="amount"
@@ -399,6 +408,7 @@ export const OrderMode = ({
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
+            disabled={runing}
             spellCheck={false}
             type="text"
             name="minAmount"
@@ -412,6 +422,7 @@ export const OrderMode = ({
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
+            disabled={runing}
             spellCheck={false}
             type="text"
             name="maxAmount"
@@ -424,8 +435,8 @@ export const OrderMode = ({
       </div>
 
       <div>
-        <Button className="w-full" type="submit" disabled={runing || !startBalance}>
-          执行
+        <Button className="w-full" type="submit" disabled={!startBalance}>
+          {runing ? '终止' : '执行'}
         </Button>
       </div>
     </form>

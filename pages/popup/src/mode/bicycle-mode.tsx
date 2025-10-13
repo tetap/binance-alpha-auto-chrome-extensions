@@ -109,9 +109,14 @@ export const BicycleMode = ({
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    const options = await getOptions(e);
+    if (runing) {
+      stopRef.current = true;
+      appendLog('正在停止中，请等待本次执行完成', 'info');
+      e.preventDefault();
+      return;
+    }
 
-    if (runing) return;
+    const options = await getOptions(e);
 
     stopRef.current = false;
 
@@ -380,6 +385,7 @@ export const BicycleMode = ({
           name="count"
           id="count"
           placeholder="保守设置(检测价格波动次数)"
+          disabled={runing}
           defaultValue={orderSetting.count ?? '3'}
           onChange={e => bicycleSettingStorage.setVal({ count: e.target.value ?? '' })}
         />
@@ -394,6 +400,7 @@ export const BicycleMode = ({
           name="checkPriceTime"
           id="checkPriceTime"
           placeholder={`卖出超时时间`}
+          disabled={runing}
           defaultValue={orderSetting.checkPriceTime ?? '1'}
           onChange={e => bicycleSettingStorage.setVal({ checkPriceTime: e.target.value ?? '' })}
         />
@@ -408,6 +415,7 @@ export const BicycleMode = ({
           name="checkPriceCount"
           id="checkPriceCount"
           placeholder={`卖出超时次数`}
+          disabled={runing}
           defaultValue={orderSetting.checkPriceCount ?? '60'}
           onChange={e => bicycleSettingStorage.setVal({ checkPriceCount: e.target.value ?? '' })}
         />
@@ -417,6 +425,7 @@ export const BicycleMode = ({
         <Label className="w-28 flex-none">下单金额模式</Label>
         <RadioGroup
           name="orderAmountMode"
+          disabled={runing}
           defaultValue={orderSetting.orderAmountMode ?? 'Fixed'}
           className="flex items-center gap-4"
           onValueChange={value => bicycleSettingStorage.setVal({ orderAmountMode: value as 'Fixed' | 'Random' })}>
@@ -447,6 +456,7 @@ export const BicycleMode = ({
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
+          disabled={runing}
           spellCheck={false}
           type="text"
           name="amount"
@@ -468,6 +478,7 @@ export const BicycleMode = ({
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
+            disabled={runing}
             spellCheck={false}
             type="text"
             name="minAmount"
@@ -481,6 +492,7 @@ export const BicycleMode = ({
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
+            disabled={runing}
             spellCheck={false}
             type="text"
             name="maxAmount"
@@ -493,8 +505,8 @@ export const BicycleMode = ({
       </div>
 
       <div>
-        <Button className="w-full" type="submit" disabled={runing || !startBalance}>
-          执行
+        <Button className="w-full" type="submit" disabled={!startBalance}>
+          {runing ? '终止' : '执行'}
         </Button>
       </div>
     </form>

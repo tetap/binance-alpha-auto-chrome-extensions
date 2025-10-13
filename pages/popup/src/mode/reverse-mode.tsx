@@ -108,9 +108,14 @@ export const ReverseMode = ({
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    const options = await getOptions(e);
+    if (runing) {
+      stopRef.current = true;
+      appendLog('正在停止中，请等待本次执行完成', 'info');
+      e.preventDefault();
+      return;
+    }
 
-    if (runing) return;
+    const options = await getOptions(e);
 
     stopRef.current = false;
 
@@ -334,6 +339,7 @@ export const ReverseMode = ({
           type="text"
           name="dot"
           id="dot"
+          disabled={runing}
           placeholder="出售保留小数点"
           defaultValue={setting.dot ?? '3'}
           onChange={e => settingStorage.setVal({ dot: e.target.value ?? '' })}
@@ -348,6 +354,7 @@ export const ReverseMode = ({
           type="text"
           name="count"
           id="count"
+          disabled={runing}
           placeholder="保守设置(检测价格波动次数)"
           defaultValue={setting.count ?? '3'}
           onChange={e => settingStorage.setVal({ count: e.target.value ?? '' })}
@@ -362,6 +369,7 @@ export const ReverseMode = ({
           type="text"
           name="timeout"
           id="timeout"
+          disabled={runing}
           placeholder={`挂单超时`}
           defaultValue={setting.timeout ?? '3'}
           onChange={e => settingStorage.setVal({ timeout: e.target.value ?? '' })}
@@ -372,6 +380,7 @@ export const ReverseMode = ({
         <Label className="w-28 flex-none">下单金额模式</Label>
         <RadioGroup
           name="orderAmountMode"
+          disabled={runing}
           defaultValue={setting.orderAmountMode ?? 'Fixed'}
           className="flex items-center gap-4"
           onValueChange={value => settingStorage.setVal({ orderAmountMode: value as 'Fixed' | 'Random' })}>
@@ -402,6 +411,7 @@ export const ReverseMode = ({
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
+          disabled={runing}
           spellCheck={false}
           type="text"
           name="amount"
@@ -423,6 +433,7 @@ export const ReverseMode = ({
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
+            disabled={runing}
             spellCheck={false}
             type="text"
             name="minAmount"
@@ -440,6 +451,7 @@ export const ReverseMode = ({
             type="text"
             name="maxAmount"
             id="maxAmount"
+            disabled={runing}
             placeholder={`最大金额`}
             defaultValue={setting.maxAmount ?? '100'}
             onChange={e => settingStorage.setVal({ maxAmount: e.target.value ?? '' })}
@@ -448,8 +460,8 @@ export const ReverseMode = ({
       </div>
 
       <div>
-        <Button className="w-full" type="submit" disabled={runing || !startBalance}>
-          执行
+        <Button className="w-full" type="submit" disabled={!startBalance}>
+          {runing ? '终止' : '执行'}
         </Button>
       </div>
     </form>

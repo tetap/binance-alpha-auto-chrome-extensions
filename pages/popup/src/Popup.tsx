@@ -203,6 +203,7 @@ const Popup = () => {
               />
               <Button
                 variant={'ghost'}
+                disabled={runing}
                 size={'icon'}
                 className="absolute bottom-0 right-0 top-0 z-10 my-auto"
                 onClick={() => handleScan()}>
@@ -279,16 +280,22 @@ const Popup = () => {
             </div>
           )}
 
-          <div className={cn(runing ? 'cursor-not-allowed' : '')}>
-            <div className={cn(runing ? 'pointer-events-none' : '')}>
+          <div>
+            <div>
               <Tabs
                 defaultValue={setting.mode ?? 'Reverse'}
                 className="w-full"
                 onValueChange={value => settingStorage.setVal({ mode: value as 'Reverse' | 'Order' })}>
                 <TabsList>
-                  <TabsTrigger value="Reverse">反向订单</TabsTrigger>
-                  <TabsTrigger value="Order">限价单</TabsTrigger>
-                  <TabsTrigger value="Bicycle">摩托变单车</TabsTrigger>
+                  <TabsTrigger disabled={runing} value="Reverse">
+                    反向订单
+                  </TabsTrigger>
+                  <TabsTrigger disabled={runing} value="Order">
+                    限价单
+                  </TabsTrigger>
+                  <TabsTrigger disabled={runing} value="Bicycle">
+                    摩托变单车
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="Reverse">
                   <ReverseMode
