@@ -1,4 +1,4 @@
-import '@src/index.css';
+import '@src/style/index.css';
 import Popup from '@src/Popup';
 import { createRoot } from 'react-dom/client';
 

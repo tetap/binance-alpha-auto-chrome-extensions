@@ -6,7 +6,10 @@ import type { BaseStorageType } from '../base/index.js';
 export type SettingState = {
   amount: string;
   timeout: string;
+  // 上限方式
+  runType: 'sum' | 'price';
   runNum: string;
+  runPrice: string;
   count: string;
   dot: string;
   type: 'Buy' | 'Sell';
@@ -36,6 +39,7 @@ const storage = createStorage<SettingState>(
     amount: '',
     timeout: '2',
     runNum: '3',
+    runPrice: '65536',
     count: '1',
     dot: '3',
     type: 'Buy',
@@ -46,6 +50,7 @@ const storage = createStorage<SettingState>(
     minAmount: '50',
     secret: '',
     api: 'https://www.binance.com',
+    runType: 'sum',
   },
   {
     storageEnum: StorageEnum.Local,

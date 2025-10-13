@@ -1,14 +1,12 @@
-import '@src/Popup.css';
-import { startLoopAuth, stopLoopAuth } from './tool';
 import {
+  startLoopAuth,
+  stopLoopAuth,
   getIsSell,
   backSell,
   callSubmit,
-  // detectDropRisk,
   getBalance,
   getId,
   getPrice,
-  // getPriceList,
   isAuthModal,
   jumpToBuy,
   jumpToSell,
@@ -21,15 +19,15 @@ import {
   checkMarketStable,
   injectDependencies,
   closeReverseOrder,
-} from './tool_v1';
+} from '../tool/tool_v1';
 import { useStorage } from '@extension/shared';
-import { bicycleSettingStorage, settingStorage, todayDealStorage } from '@extension/storage';
+import { bicycleSettingStorage, settingStorage, todayDealStorage, todayNoMulDealStorage } from '@extension/storage';
 import { Button, cn, Input, Label, RadioGroup, RadioGroupItem } from '@extension/ui';
 import dayjs, { extend } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { floor } from 'lodash-es';
 import { useRef } from 'react';
-import type { IPanelProps } from './type';
+import type { IPanelProps } from '../props/type';
 
 extend(utc);
 
@@ -46,14 +44,17 @@ export const BicycleMode = ({
   const stopRef = useRef(false);
   const orderSetting = useStorage(bicycleSettingStorage);
 
-  const getOptions = (e: React.FormEvent<HTMLFormElement>) => {
+  const getOptions = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
     const formData = new FormData(form);
+    const setting = await settingStorage.get();
     const data = Object.fromEntries(formData.entries()) as {
       amount: string;
       count: string;
       runNum: string;
+      runPrice: string;
+      runType: (typeof setting)['runType'];
       orderAmountMode: 'Fixed' | 'Random';
       maxAmount: string;
       minAmount: string;
@@ -61,16 +62,11 @@ export const BicycleMode = ({
       checkPriceCount: string;
     };
 
-    if (!data.runNum || !data.checkPriceCount || !data.checkPriceTime || !data.count) {
+    if (!data.checkPriceCount || !data.checkPriceTime || !data.count) {
       throw new Error('参数不能为空');
     }
     // 校验amount count dot runNum 是否为数字
-    if (
-      isNaN(Number(data.runNum)) ||
-      isNaN(Number(data.checkPriceCount)) ||
-      isNaN(Number(data.checkPriceTime)) ||
-      isNaN(Number(data.count))
-    ) {
+    if (isNaN(Number(data.checkPriceCount)) || isNaN(Number(data.checkPriceTime)) || isNaN(Number(data.count))) {
       throw new Error('参数必须为数字');
     }
     // 校验下单金额
@@ -95,12 +91,27 @@ export const BicycleMode = ({
       throw new Error('下单金额模式错误');
     }
 
+    const runNum = setting['runNum'];
+    const runPrice = setting['runPrice'];
+    const runType = setting['runType'];
+
+    data['runNum'] = runNum;
+    data['runPrice'] = runPrice;
+    data['runType'] = runType;
+
+    if (data['runType'] === 'sum' && !data['runNum']) {
+      throw new Error('请输入运行次数');
+    } else if (data['runType'] === 'price' && !data['runPrice']) {
+      throw new Error('请输入运行价格');
+    }
+
     return data;
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const options = await getOptions(e);
+
     if (runing) return;
-    const options = getOptions(e);
 
     stopRef.current = false;
 
@@ -108,13 +119,16 @@ export const BicycleMode = ({
 
     const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
 
-    const symbol = await getId(tab, api).catch(() => ''); // 获取货币id
+    const id = await getId(tab, api).catch(() => null); // 获取货币id
 
-    if (!symbol) {
+    if (!id || !id.symbol) {
       appendLog('获取货币id失败', 'error');
       setRuning(false);
       return;
     }
+    const { symbol, mul } = id;
+
+    appendLog(`获取到货币id: ${symbol} 积分乘数: ${mul}`, 'info');
 
     // 二次校验
     const secret = (await settingStorage.get()).secret;
@@ -125,7 +139,15 @@ export const BicycleMode = ({
       });
     }
 
-    const runNum = options.runNum ? Number(options.runNum) : 1; // 运行次数
+    const runType = options.runType;
+
+    let runNum = options.runNum ? Number(options.runNum) : 1; // 运行次数
+
+    const runPrice = options.runPrice ? Number(options.runPrice) : 1; // 运行金额
+
+    if (runType === 'price') {
+      runNum = Number.MAX_VALUE;
+    }
 
     const timeout = options.checkPriceTime ? Number(options.checkPriceTime) : 1; // 下单超时时间
 
@@ -173,23 +195,6 @@ export const BicycleMode = ({
           appendLog(stable.message, 'success');
         }
 
-        // // 抖动检测
-        // const trades = await getPriceList(symbol);
-        // console.log('trades', trades);
-        // // 获取抖动窗口
-        // const priceWindows = detectDropRisk(trades, {
-        //   buyIndex: 0,
-        //   windowMs: 10_000,
-        //   thresholdPct: 0.1,
-        //   volumeWeighted: true,
-        // });
-        // appendLog(`价格抖动窗口: 是否买入: ${priceWindows.hasRisk ? '取消' : '买入'};`, 'info');
-        // appendLog(`价格抖动窗口: 买入价: ${priceWindows.buyPrice};最低价: ${priceWindows.minPrice};`, 'info');
-        // if (priceWindows.hasRisk) {
-        //   i--;
-        //   await new Promise(resolve => setTimeout(resolve, 3000));
-        //   continue;
-        // }
         let buyPrice = await getPrice(symbol, api);
         appendLog(`保守设置次数:${count}`, 'info');
         for (let j = 0; j < count; j++) {
@@ -203,14 +208,6 @@ export const BicycleMode = ({
           }
         }
         if (!buyPrice) throw new Error('获取价格失败');
-
-        // const checkPrice = await getPrice(symbol, api); // 获取价格
-
-        // if (Number(checkPrice) < Number(buyPrice)) {
-        //   appendLog(`价格${buyPrice}下滑到${checkPrice}，休息一会儿`, 'error');
-        //   await new Promise(resolve => setTimeout(resolve, 6000));
-        //   throw new Error(`价格${buyPrice}下滑到${checkPrice}，停止买入`);
-        // }
 
         appendLog(`获取到买入价格: ${buyPrice}`, 'info');
         const subPrice =
@@ -246,7 +243,9 @@ export const BicycleMode = ({
 
         const day = dayjs().utc().format('YYYY-MM-DD');
 
-        todayDealStorage.setVal(day, amount);
+        todayNoMulDealStorage.setVal(day, amount);
+
+        todayDealStorage.setVal(day, (Number(amount) * mul).toString());
 
         // 卖出
         await jumpToSell(tab);
@@ -325,6 +324,12 @@ export const BicycleMode = ({
         setCurrentBalance(balance);
 
         setNum(Date.now());
+
+        const price = Number(await todayDealStorage.getVal(day));
+
+        if (runType === 'price' && price >= runPrice) {
+          break;
+        }
       } catch (error: any) {
         appendLog(error.message, 'error');
         if (error.message.includes('刷新页面')) {
@@ -366,20 +371,6 @@ export const BicycleMode = ({
 
   return (
     <form className="mt-4 flex w-full flex-col gap-4" onSubmit={handleSubmit}>
-      <div className="flex w-full max-w-sm items-center justify-between gap-3">
-        <Label htmlFor="runNum" className="w-28 flex-none">
-          操作次数
-        </Label>
-        <Input
-          type="text"
-          name="runNum"
-          id="runNum"
-          placeholder={`操作次数`}
-          defaultValue={orderSetting.runNum ?? '1'}
-          onChange={e => bicycleSettingStorage.setVal({ runNum: e.target.value ?? '' })}
-        />
-      </div>
-
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
         <Label htmlFor="count" className="w-28 flex-none">
           保守设置(检测价格波动次数)

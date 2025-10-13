@@ -1,8 +1,10 @@
-import '@src/Popup.css';
-import { BicycleMode } from './bicycle-mode';
-import { OrderMode } from './order-mode';
-import { ReverseMode } from './reverse-mode';
-import { getBalance } from './tool';
+import '@src/style/Popup.css';
+import { BicycleMode } from './mode/bicycle-mode';
+import { OrderMode } from './mode/order-mode';
+import { ReverseMode } from './mode/reverse-mode';
+import { base32Encode, parseMigrationQRCode } from './tool/protobuf';
+import { getBalance } from './tool/tool_v1';
+import { isNewerVersion } from './tool/version';
 import { useLogger } from './useLogger';
 import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
 import { settingStorage, todayDealStorage } from '@extension/storage';
@@ -13,6 +15,9 @@ import {
   Input,
   Label,
   LoadingSpinner,
+  RadioGroup,
+  RadioGroupItem,
+  Scan,
   Tabs,
   TabsContent,
   TabsList,
@@ -20,22 +25,31 @@ import {
 } from '@extension/ui';
 import dayjs, { extend } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { useLayoutEffect, useMemo, useState } from 'react';
+import jsqr from 'jsqr';
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 
 extend(utc);
 
 const Popup = () => {
+  const [updateInfo, setUpdateInfo] = useState({ update: false, version: '', url: '' });
   const [num, setNum] = useState(0);
   const setting = useStorage(settingStorage);
   const deal = useStorage(todayDealStorage);
+  const noMulDeal = useStorage(todayDealStorage);
 
   const todayDeal = useMemo(() => {
     const day = dayjs().utc().format('YYYY-MM-DD');
-    console.log(day, deal);
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     typeof num;
     return deal[day] ?? '0';
   }, [deal, num]);
+
+  const todayNoMulDeal = useMemo(() => {
+    const day = dayjs().utc().format('YYYY-MM-DD');
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    typeof num;
+    return noMulDeal[day] ?? '0';
+  }, [noMulDeal, num]);
 
   const [runing, setRuning] = useState(false);
   // 开始余额
@@ -53,7 +67,64 @@ const Popup = () => {
     return Number(b1) - Number(b2);
   }, [currentBalance, startBalance]);
 
+  const handleScan = useCallback(() => {
+    // 获取文件
+    const file = document.createElement('input');
+    file.type = 'file';
+    file.accept = '.png,.jpg,.jpeg,.gif';
+    file.onchange = async e => {
+      const target = e.target as HTMLInputElement;
+      const input = target.files;
+      if (!input?.length) return alert('请选择图片文件');
+      const inputFile = input[0];
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return alert('请使用chrome浏览器打开');
+      const img = new Image();
+      img.src = URL.createObjectURL(inputFile);
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        try {
+          const imageData = ctx.getImageData(0, 0, img.width, img.height);
+          const data = jsqr(imageData.data, imageData.width, imageData.height);
+          if (!data?.data) throw new Error('二维码内容错误，请重新扫描');
+          const results = parseMigrationQRCode(data.data);
+          if (!results.length || results.length > 1) throw new Error('请导入正确的二维码，不要导入多条');
+          const { secretBytes } = results[0];
+          if (!secretBytes) throw new Error('二维码内容错误，请重新扫描');
+          const secret = base32Encode(secretBytes);
+          settingStorage.setVal({ secret });
+          alert('导入成功');
+        } catch (error: any) {
+          alert(error.message);
+        }
+      };
+
+      file.remove();
+    };
+    file.click();
+  }, []);
+
+  const getNewVersion = async () => {
+    const response = await fetch(
+      'https://api.github.com/repos/tetap/binance-alpha-auto-chrome-extensions/releases/latest',
+    );
+    const json = await response.json();
+    const tag_name = json.tag_name;
+    const html_url = json.html_url;
+    // 判断当前版本是否需要更新
+    const currentVersion = chrome.runtime.getManifest().version;
+    setUpdateInfo({
+      version: tag_name,
+      url: html_url,
+      update: isNewerVersion(tag_name, currentVersion),
+    });
+  };
+
   useLayoutEffect(() => {
+    getNewVersion();
     (async (setStartBalance, setCurrentBalance, appendLog) => {
       try {
         const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
@@ -75,6 +146,35 @@ const Popup = () => {
     <div className={cn('bg-slate-50', 'App p-4 pb-0')}>
       <div className="flex min-h-0 flex-col gap-4">
         <div className="w-full">
+          <div className="mb-2 flex flex-none items-center justify-between">
+            <a
+              target="_blank"
+              href="https://github.com/tetap/binance-alpha-auto-chrome-extensions"
+              className="text-purple-600 hover:text-purple-800">
+              当前版本: v{chrome.runtime.getManifest().version}
+            </a>
+
+            {updateInfo.update && (
+              <a target="_blank" href={updateInfo.url} className="text-purple-600 hover:text-purple-800">
+                发现新版本: {updateInfo.version}
+              </a>
+            )}
+          </div>
+
+          <div className="mb-2 text-xs">
+            <div>
+              <div>
+                当日积分交易额:<b className={cn('ml-2 text-sm text-green-500')}> {todayDeal}</b>
+              </div>
+              <div>
+                当日交易额:<b className={cn('ml-2 text-sm text-green-500')}> {todayNoMulDeal}</b>
+              </div>
+            </div>
+            <div>
+              操作损耗:<b className={cn('ml-2 text-sm', op > 0 ? 'text-green-500' : 'text-red-500')}> {op}</b>
+            </div>
+          </div>
+
           <div className="bg-background mb-4 flex flex-col gap-2 rounded-md p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="w-1/2 text-xs">
@@ -90,14 +190,24 @@ const Popup = () => {
             <Label htmlFor="secret" className="w-28 flex-none">
               二次验证(secret)
             </Label>
-            <Input
-              type="password"
-              name="secret"
-              id="secret"
-              placeholder="自动过验证码 需要开启二次验证"
-              defaultValue={setting.secret ?? ''}
-              onChange={e => settingStorage.setVal({ secret: e.target.value ?? '' })}
-            />
+            <div className="relative w-full">
+              <Input
+                type="password"
+                name="secret"
+                id="secret"
+                className="pr-8"
+                placeholder="自动过验证码 需要开启二次验证"
+                defaultValue={setting.secret ?? ''}
+                onChange={e => settingStorage.setVal({ secret: e.target.value ?? '' })}
+              />
+              <Button
+                variant={'ghost'}
+                size={'icon'}
+                className="absolute bottom-0 right-0 top-0 z-10 my-auto"
+                onClick={() => handleScan()}>
+                <Scan size={14} />
+              </Button>
+            </div>
           </div>
 
           <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
@@ -112,6 +222,57 @@ const Popup = () => {
               onChange={e => settingStorage.setVal({ api: e.target.value ?? '' })}
             />
           </div>
+
+          <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
+            <Label htmlFor="runNum" className="w-28 flex-none">
+              上限方式
+            </Label>
+            <RadioGroup
+              className="flex items-center gap-3"
+              defaultValue={setting.runType || 'sum'}
+              onValueChange={value => settingStorage.setVal({ runType: value as 'sum' | 'price' })}>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="sum" id="sum" />
+                <Label htmlFor="sum">按次数运行</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="price" id="price" />
+                <Label htmlFor="price">按积分交易额运行</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {setting.runType === 'sum' ? (
+            <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
+              <Label htmlFor="runNum" className="w-28 flex-none">
+                操作次数
+              </Label>
+              <Input
+                key="runNum"
+                type="text"
+                name="runNum"
+                id="runNum"
+                placeholder={`操作次数`}
+                defaultValue={setting.runNum ?? '1'}
+                onChange={e => settingStorage.setVal({ runNum: e.target.value ?? '' })}
+              />
+            </div>
+          ) : (
+            <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
+              <Label htmlFor="runPrice" className="w-28 flex-none">
+                操作金额(USDT)
+              </Label>
+              <Input
+                key="runPrice"
+                type="text"
+                name="runPrice"
+                id="runPrice"
+                placeholder={`操作金额`}
+                defaultValue={setting.runPrice ?? '65536'}
+                onChange={e => settingStorage.setVal({ runPrice: e.target.value ?? '' })}
+              />
+            </div>
+          )}
 
           <div className={cn(runing ? 'cursor-not-allowed' : '')}>
             <div className={cn(runing ? 'pointer-events-none' : '')}>
@@ -165,7 +326,7 @@ const Popup = () => {
           </div>
         </div>
 
-        <div className="flex h-96 w-full flex-col gap-2">
+        <div className="flex h-96 w-full flex-col gap-2 pb-4">
           <div className="flex flex-none items-center justify-between text-sm font-bold">
             <div>日志输出</div>
             <Button variant={'outline'} onClick={clearLogger}>
@@ -173,24 +334,7 @@ const Popup = () => {
             </Button>
           </div>
           {render}
-
-          <div className="flex flex-none items-center justify-between text-xs">
-            <div>
-              当日交易额:<b className={cn('ml-2 text-sm text-green-500')}> {todayDeal}</b>
-            </div>
-            <div>
-              操作损耗:<b className={cn('ml-2 text-sm', op > 0 ? 'text-green-500' : 'text-red-500')}> {op}</b>
-            </div>
-          </div>
         </div>
-      </div>
-      <div className="flex h-8 flex-none items-center justify-center">
-        <a
-          target="_blank"
-          href="https://github.com/tetap/binance-alpha-auto-chrome-extensions"
-          className="text-purple-600 hover:text-purple-800">
-          By: Tetap&nbsp;Github
-        </a>
       </div>
     </div>
   );

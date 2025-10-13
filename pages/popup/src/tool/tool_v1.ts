@@ -73,10 +73,10 @@ export const getId = async (tab: chrome.tabs.Tab, api: string) => {
   if (!name) return '';
   api = api.lastIndexOf('/') === api.length - 1 ? api.slice(0, -1) : api;
   const listRequest = await fetch(`${api}/bapi/defi/v1/public/wallet-direct/buw/wallet/cex/alpha/all/token/list`);
-  const list = (await listRequest.json()).data as { alphaId: string; symbol: string }[];
+  const list = (await listRequest.json()).data as { alphaId: string; symbol: string; mulPoint: number }[];
   const cur = list.find(c => c.symbol === name);
   if (!cur) return '';
-  return `${cur.alphaId}USDT`;
+  return { symbol: `${cur.alphaId}USDT`, mul: cur.mulPoint };
 };
 
 export interface Trade {
@@ -710,4 +710,107 @@ export const checkMarketStable = async (
     trend,
     message,
   };
+};
+
+export let loop = false;
+
+export const stopLoopAuth = async () => {
+  loop = false;
+};
+
+export const startLoopAuth = async (tab: chrome.tabs.Tab, secret: string, callback: (stop: boolean) => void) => {
+  loop = true;
+  console.log('startLoopAuth');
+  while (loop) {
+    console.log('二次验证码检测中...');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await checkAuthModal(tab, secret).catch((err: { message: string }) => {
+      console.error('startLoopAuth', err.message);
+      if (err.message.includes('停止')) {
+        callback(true);
+      }
+    });
+  }
+};
+
+export const getCode = (secret: string) => (window as any).otplib.authenticator.generate(secret);
+
+// 获取是否出现验证码弹窗
+export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
+  const isModal = await chrome.scripting.executeScript({
+    target: { tabId: tab.id! },
+    func: () => {
+      const dialog = document.querySelector('#mfa-shadow-host');
+      if (dialog) {
+        return true;
+      }
+      return false;
+    },
+  });
+  const [{ result }] = isModal;
+  if (result) {
+    if (!secret) throw new Error('出现验证码，但是未设置，自动停止');
+    const code = getCode(secret);
+    if (!code) throw new Error('出现验证码，但获取验证码失败，自动停止');
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id! },
+      args: [code],
+      func: async (code: string) => {
+        try {
+          const dialog = document.querySelector('#mfa-shadow-host');
+          if (dialog) {
+            const root = dialog.shadowRoot;
+            if (!root) throw new Error('验证失败，自动停止');
+            // 获取是否生物验证
+            if (root.querySelector('.mfa-security-page-title')?.textContent === '通过通行密钥验证') {
+              const btn = root.querySelector('.bidscls-btnLink2') as HTMLButtonElement;
+              if (btn) {
+                // 跳转二次验证
+                btn.click();
+              }
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            const steps = root.querySelectorAll('.bn-mfa-overview-step-title');
+            const sfzapp = Array.from(steps).find(c => c.innerHTML.includes('身份验证')) as HTMLButtonElement;
+            if (sfzapp) {
+              sfzapp.click();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            // 判断是否是身份验证器
+            const checkText = root.querySelector('.bn-formItem-label')?.textContent;
+            console.log('通过验证码');
+            if (checkText === '身份验证器App') {
+              // 查找input
+              const input = root.querySelector('.bn-textField-input') as any;
+              const value = code;
+
+              const nativeInputValueSetter = (Object as any).getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype,
+                'value',
+              ).set;
+
+              nativeInputValueSetter.call(input, value);
+
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              input.dispatchEvent(new Event('change', { bubbles: true }));
+              await new Promise(resolve => setTimeout(resolve, 5000));
+              const dialog = document.querySelector('#mfa-shadow-host');
+              if (dialog) {
+                window.location.reload();
+              }
+            }
+          }
+          return { error: '' };
+        } catch (error) {
+          return { error: String(error) };
+        }
+      },
+    });
+    const [{ result: result2 }] = results;
+    if (result2?.error) {
+      throw new Error(result2?.error);
+    }
+    return true;
+  }
+  return false;
 };

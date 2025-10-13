@@ -2,16 +2,16 @@ import { createStorage, StorageEnum } from '../base/index.js';
 import type { BaseStorageType } from '../base/index.js';
 
 // eslint-disable-next-line import-x/exports-last
-export type TodayDealStateType = Record<string, string>;
+export type TodayNoMulDealStateType = Record<string, string>;
 
 // eslint-disable-next-line import-x/exports-last
-export type TodayDealType = BaseStorageType<TodayDealStateType> & {
+export type TodayNoMulDealType = BaseStorageType<TodayNoMulDealStateType> & {
   setVal: (day: string, val: string) => Promise<void>;
   getVal: (day: string) => Promise<string>;
 };
 
-const storage = createStorage<TodayDealStateType>(
-  'today-deal-storage-key',
+const storage = createStorage<TodayNoMulDealStateType>(
+  'today-mo-mul-deal-storage-key',
   {},
   {
     storageEnum: StorageEnum.Local,
@@ -19,7 +19,7 @@ const storage = createStorage<TodayDealStateType>(
   },
 );
 
-export const todayDealStorage: TodayDealType = {
+export const todayNoMulDealStorage: TodayNoMulDealType = {
   ...storage,
   setVal: async (day, val) => {
     await storage.set(currentState => ({
