@@ -25,6 +25,17 @@
 ## 详细说明
 [点击查看](https://jcna3m5r8klj.feishu.cn/drive/folder/OUNgfvBnKlZtqBd84wCc356ynDd?from=from_copylink)
 
+## 💰 赞助支持
+
+您的每一份支持都是我们前进的动力
+一杯Coffee的微信赞赏
+
+感谢所有的支持者，得到你们的支持我将会更加完善开源库的能力！ 🚀
+
+<picture>
+    <img alt="Logo" src="./docs/wechat.jpg" />
+</picture>
+
 ## 进群交流
 
 有任何问题哦度可以在issues反馈，或者加入我的qq群反馈。
@@ -34,3 +45,4 @@
 <picture>
     <img alt="Logo" src="./docs/qrcode.jpg" />
 </picture>
+
