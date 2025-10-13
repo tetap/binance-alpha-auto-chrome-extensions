@@ -770,8 +770,9 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
           if (dialog) {
             const root = dialog.shadowRoot;
             if (!root) throw new Error('验证失败，自动停止');
+            const textContent = root.querySelector('.mfa-security-page-title')?.textContent;
             // 获取是否生物验证
-            if (root.querySelector('.mfa-security-page-title')?.textContent === '通过通行密钥验证') {
+            if (textContent === '通过通行密钥验证' || textContent === 'Verify with passkey') {
               const btn = root.querySelector('.bidscls-btnLink2') as HTMLButtonElement;
               if (btn) {
                 // 跳转二次验证
@@ -786,9 +787,8 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
             // 判断是否是身份验证器
-            const checkText = root.querySelector('.bn-formItem-label')?.textContent;
-            console.log('通过验证码');
-            if (checkText === '身份验证器App') {
+            const checkText = root.querySelector('.bn-formItem-label')?.textContent?.trim();
+            if (checkText === '身份验证器App' || checkText === 'Verification code') {
               // 查找input
               const input = root.querySelector('.bn-textField-input') as any;
               const value = code;
