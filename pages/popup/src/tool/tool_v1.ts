@@ -132,8 +132,9 @@ export const jumpToBuy = async (tab: chrome.tabs.Tab) =>
     }
   });
 
-export const setPrice = async (tab: chrome.tabs.Tab, price: string) =>
-  await callChromeJs(tab, [price], async price => {
+export const setPrice = async (tab: chrome.tabs.Tab, price: string) => {
+  await injectDependencies(tab);
+  return await callChromeJs(tab, [price], async price => {
     try {
       // 卖出价格
       window.setInputValue('input#limitPrice', price);
@@ -143,9 +144,11 @@ export const setPrice = async (tab: chrome.tabs.Tab, price: string) =>
       return { error: error.message, val: false };
     }
   });
+};
 
-export const setRangeValue = async (tab: chrome.tabs.Tab, value: string) =>
-  await callChromeJs(tab, [value], async value => {
+export const setRangeValue = async (tab: chrome.tabs.Tab, value: string) => {
+  await injectDependencies(tab);
+  return await callChromeJs(tab, [value], async value => {
     try {
       // 设置卖出数量
       window.setInputValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', value);
@@ -155,9 +158,11 @@ export const setRangeValue = async (tab: chrome.tabs.Tab, value: string) =>
       return { error: error.message, val: false };
     }
   });
+};
 
-export const setLimitTotal = async (tab: chrome.tabs.Tab, value: string) =>
-  await callChromeJs(tab, [value], async value => {
+export const setLimitTotal = async (tab: chrome.tabs.Tab, value: string) => {
+  await injectDependencies(tab);
+  return await callChromeJs(tab, [value], async value => {
     try {
       // 设置卖出数量
       window.setInputValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal', value);
@@ -167,6 +172,7 @@ export const setLimitTotal = async (tab: chrome.tabs.Tab, value: string) =>
       return { error: error.message, val: false };
     }
   });
+};
 
 // 提交卖出
 export const callSubmit = async (tab: chrome.tabs.Tab) =>
@@ -276,8 +282,9 @@ export const isAuthModal = async (tab: chrome.tabs.Tab) =>
   });
 
 // 检测是否有卖单
-export const getIsSell = async (tab: chrome.tabs.Tab) =>
-  await callChromeJs(tab, [], async () => {
+export const getIsSell = async (tab: chrome.tabs.Tab) => {
+  await injectDependencies(tab);
+  return await callChromeJs(tab, [], async () => {
     try {
       const sellPanel = document.querySelector('.bn-tab__buySell[aria-controls="bn-tab-pane-1"]') as HTMLButtonElement;
       if (!sellPanel) {
@@ -311,7 +318,7 @@ export const getIsSell = async (tab: chrome.tabs.Tab) =>
       return { error: error.message, val: true };
     }
   });
-
+};
 // 兜底卖出
 export const backSell = async (
   tab: chrome.tabs.Tab,
@@ -556,8 +563,9 @@ export const openReverseOrder = async (tab: chrome.tabs.Tab) =>
       return { error: error.message, val: false };
     }
   });
-export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) =>
-  await callChromeJs(tab, [price], async price => {
+export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) => {
+  await injectDependencies(tab);
+  return await callChromeJs(tab, [price], async price => {
     try {
       const limitTotals = document.querySelectorAll('input#limitTotal');
       if (!limitTotals.length || limitTotals.length < 2) throw new Error('反向价格元素不存在, 请确认页面是否正确');
@@ -570,6 +578,7 @@ export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) =>
       return { error: error.message, val: false };
     }
   });
+};
 
 export const waitBuyOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
   await callChromeJs(tab, [timeout], async timeout => {
