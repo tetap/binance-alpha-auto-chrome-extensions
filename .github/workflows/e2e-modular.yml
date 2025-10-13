@@ -31,7 +31,7 @@ jobs:
           node-version-file: '.nvmrc'
           cache: pnpm
 
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Configure modules | scenario "${{ matrix.scenario }}"
         run: |

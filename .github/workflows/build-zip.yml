@@ -27,7 +27,7 @@ jobs:
           cache: pnpm
 
       # 4. 安装依赖
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile --prefer-offline
 
       # 5. 构建扩展
       - run: pnpm build
