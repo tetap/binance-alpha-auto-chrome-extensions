@@ -13,5 +13,5 @@ jobs:
           node-version-file: '.nvmrc'
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm install
       - run: pnpm lint
