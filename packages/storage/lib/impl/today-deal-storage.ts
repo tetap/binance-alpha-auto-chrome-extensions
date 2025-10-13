@@ -11,7 +11,7 @@ export type TodayDealType = BaseStorageType<TodayDealStateType> & {
 };
 
 const storage = createStorage<TodayDealStateType>(
-  'today-deal-storage-key',
+  'today-deal-storage-key-v1',
   {},
   {
     storageEnum: StorageEnum.Local,

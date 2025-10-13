@@ -7,7 +7,7 @@ import { getBalance } from './tool/tool_v1';
 import { isNewerVersion } from './tool/version';
 import { useLogger } from './useLogger';
 import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
-import { settingStorage, todayDealStorage } from '@extension/storage';
+import { settingStorage, todayDealStorage, todayNoMulDealStorage } from '@extension/storage';
 import {
   Button,
   cn,
@@ -35,7 +35,7 @@ const Popup = () => {
   const [num, setNum] = useState(0);
   const setting = useStorage(settingStorage);
   const deal = useStorage(todayDealStorage);
-  const noMulDeal = useStorage(todayDealStorage);
+  const noMulDeal = useStorage(todayNoMulDealStorage);
 
   const todayDeal = useMemo(() => {
     const day = dayjs().utc().format('YYYY-MM-DD');
@@ -198,6 +198,7 @@ const Popup = () => {
                 className="pr-8"
                 placeholder="自动过验证码 需要开启二次验证"
                 defaultValue={setting.secret ?? ''}
+                disabled={runing}
                 onChange={e => settingStorage.setVal({ secret: e.target.value ?? '' })}
               />
               <Button
@@ -218,6 +219,7 @@ const Popup = () => {
               name="api"
               id="api"
               placeholder="如果可以访问就不要改"
+              disabled={runing}
               defaultValue={setting.api ?? 'https://www.binance.com'}
               onChange={e => settingStorage.setVal({ api: e.target.value ?? '' })}
             />
@@ -228,6 +230,7 @@ const Popup = () => {
               上限方式
             </Label>
             <RadioGroup
+              disabled={runing}
               className="flex items-center gap-3"
               defaultValue={setting.runType || 'sum'}
               onValueChange={value => settingStorage.setVal({ runType: value as 'sum' | 'price' })}>
@@ -248,6 +251,7 @@ const Popup = () => {
                 操作次数
               </Label>
               <Input
+                disabled={runing}
                 key="runNum"
                 type="text"
                 name="runNum"
@@ -263,6 +267,7 @@ const Popup = () => {
                 操作金额(USDT)
               </Label>
               <Input
+                disabled={runing}
                 key="runPrice"
                 type="text"
                 name="runPrice"

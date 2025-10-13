@@ -11,7 +11,7 @@ export type TodayNoMulDealType = BaseStorageType<TodayNoMulDealStateType> & {
 };
 
 const storage = createStorage<TodayNoMulDealStateType>(
-  'today-mo-mul-deal-storage-key',
+  'today-mo-mul-deal-storage-key-v1',
   {},
   {
     storageEnum: StorageEnum.Local,
