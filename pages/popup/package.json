@@ -1,6 +1,6 @@
 {
   "name": "@extension/popup",
-  "version": "0.0.69",
+  "version": "0.0.70",
   "description": "chrome extension - popup",
   "type": "module",
   "private": true,
@@ -29,7 +29,6 @@
     "dayjs": "^1.11.18",
     "jsqr": "^1.4.0",
     "lodash-es": "^4.17.21",
-    "protobufjs": "^7.5.4",
     "rfc4648": "^1.5.4"
   },
   "devDependencies": {
