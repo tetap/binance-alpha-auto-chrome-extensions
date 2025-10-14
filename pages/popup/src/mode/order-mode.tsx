@@ -57,6 +57,8 @@ export const OrderMode = ({
       orderAmountMode: 'Fixed' | 'Random';
       maxAmount: string;
       minAmount: string;
+      minSleep: string;
+      maxSleep: string;
     };
 
     if (!data.timeout || !data.count) {
@@ -94,6 +96,13 @@ export const OrderMode = ({
     data['runNum'] = runNum;
     data['runPrice'] = runPrice;
     data['runType'] = runType;
+
+    data['minSleep'] = setting['minSleep'] || '1';
+    data['maxSleep'] = setting['maxSleep'] || '5';
+
+    if (Number(data['maxSleep']) <= Number(data['minSleep'])) {
+      throw new Error('最大延迟时间不能小于最小延迟时间');
+    }
 
     if (data['runType'] === 'sum' && !data['runNum']) {
       throw new Error('请输入运行次数');
@@ -158,6 +167,9 @@ export const OrderMode = ({
 
     const timeout = options.timeout ? Number(options.timeout) : 1; // 下单超时时间
 
+    const minSleep = options.maxSleep ? Number(options.minSleep) : 1;
+    const maxSleep = options.maxSleep ? Number(options.maxSleep) : 5;
+
     const count = Number(options.count); // 保守设置
 
     let balance = await getBalance(tab);
@@ -169,6 +181,8 @@ export const OrderMode = ({
     }
     let index = 0;
     for (let i = 0; i < runNum; i++) {
+      let sleepTime = Math.floor(Math.random() * (maxSleep - minSleep + 1) + minSleep) * 1000;
+      appendLog(`当前轮次: ${i + 1}`, 'info');
       index++;
       injectDependencies(tab);
 
@@ -176,11 +190,10 @@ export const OrderMode = ({
         appendLog(`意外终止`, 'error');
         break;
       }
-      appendLog(`当前轮次: ${i + 1}`, 'info');
 
       try {
         // 等待1s
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, sleepTime));
         // 校验是否有未知弹窗
         await checkUnknownModal(tab);
         // 校验是否有未取消的订单
@@ -255,12 +268,16 @@ export const OrderMode = ({
 
         todayDealStorage.setVal(day, (Number(amount) * mul).toString());
 
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        sleepTime = Math.floor(Math.random() * (maxSleep - minSleep + 1) + minSleep) * 1000;
+
+        await new Promise(resolve => setTimeout(resolve, sleepTime));
 
         await backSell(tab, api, symbol, appendLog, timeout);
 
+        sleepTime = Math.floor(Math.random() * (maxSleep - minSleep + 1) + minSleep) * 1000;
+
         // 等待2s
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, sleepTime));
 
         // 刷新余额
         const balance = await getBalance(tab);

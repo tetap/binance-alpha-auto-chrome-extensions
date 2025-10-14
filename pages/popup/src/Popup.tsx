@@ -1,5 +1,4 @@
 import '@src/style/Popup.css';
-import { BicycleMode } from './mode/bicycle-mode';
 import { OrderMode } from './mode/order-mode';
 import { ReverseMode } from './mode/reverse-mode';
 import { base32Encode, parseMigrationQRCode } from './tool/protobuf';
@@ -280,6 +279,41 @@ const Popup = () => {
             </div>
           )}
 
+          <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
+            <Label htmlFor="runNum" className="w-28 flex-none">
+              随机延迟(s)
+            </Label>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Input
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                disabled={runing}
+                spellCheck={false}
+                type="text"
+                name="minAmount"
+                id="minAmount"
+                placeholder={`最小时间(s)`}
+                defaultValue={setting.minSleep ?? '1'}
+                onChange={e => settingStorage.setVal({ minSleep: e.target.value ?? '' })}
+              />
+              <div>-</div>
+              <Input
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                disabled={runing}
+                spellCheck={false}
+                type="text"
+                name="maxAmount"
+                id="maxAmount"
+                placeholder={`最大时间(s)`}
+                defaultValue={setting.maxSleep ?? '5'}
+                onChange={e => settingStorage.setVal({ maxSleep: e.target.value ?? '' })}
+              />
+            </div>
+          </div>
+
           <div>
             <div>
               <Tabs
@@ -292,9 +326,6 @@ const Popup = () => {
                   </TabsTrigger>
                   <TabsTrigger disabled={runing} value="Order">
                     限价单
-                  </TabsTrigger>
-                  <TabsTrigger disabled={runing} value="Bicycle">
-                    摩托变单车
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="Reverse">
@@ -311,18 +342,6 @@ const Popup = () => {
                 </TabsContent>
                 <TabsContent value="Order">
                   <OrderMode
-                    setCurrentBalance={setCurrentBalance}
-                    setRuning={setRuning}
-                    setStartBalance={setStartBalance}
-                    startBalance={startBalance}
-                    runing={runing}
-                    appendLog={appendLog}
-                    setNum={setNum}
-                    api={setting.api || 'https://www.binance.com'}
-                  />
-                </TabsContent>
-                <TabsContent value="Bicycle">
-                  <BicycleMode
                     setCurrentBalance={setCurrentBalance}
                     setRuning={setRuning}
                     setStartBalance={setStartBalance}

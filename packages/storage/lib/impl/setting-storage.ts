@@ -26,6 +26,11 @@ export type SettingState = {
   secret: string;
   // api地址
   api: string;
+
+  // 最小时间延迟
+  minSleep: string;
+  // 最大时间间隔
+  maxSleep: string;
 };
 
 // eslint-disable-next-line import-x/exports-last
@@ -51,6 +56,8 @@ const storage = createStorage<SettingState>(
     secret: '',
     api: 'https://www.binance.com',
     runType: 'sum',
+    minSleep: '1',
+    maxSleep: '5',
   },
   {
     storageEnum: StorageEnum.Local,

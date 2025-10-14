@@ -1,6 +1,6 @@
 declare global {
   interface Window {
-    setInputValue: (selector: string, value: string) => void;
+    setValue: (selector: string, value: string) => void;
   }
 }
 
@@ -9,7 +9,7 @@ export const injectDependencies = async (tab: chrome.tabs.Tab) => {
     target: { tabId: tab.id! },
     world: 'MAIN',
     func: () => {
-      window.setInputValue = (selector, value) => {
+      window.setValue = (selector, value) => {
         const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
         if (!input) throw new Error('input元素不存在');
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
@@ -137,7 +137,7 @@ export const setPrice = async (tab: chrome.tabs.Tab, price: string) => {
   return await callChromeJs(tab, [price], async price => {
     try {
       // 卖出价格
-      window.setInputValue('input#limitPrice', price);
+      window.setValue('input#limitPrice', price);
       await new Promise(resolve => setTimeout(resolve, 16));
       return { error: '', val: true };
     } catch (error: any) {
@@ -151,7 +151,7 @@ export const setRangeValue = async (tab: chrome.tabs.Tab, value: string) => {
   return await callChromeJs(tab, [value], async value => {
     try {
       // 设置卖出数量
-      window.setInputValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', value);
+      window.setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', value);
       await new Promise(resolve => setTimeout(resolve, 16));
       return { error: '', val: true };
     } catch (error: any) {
@@ -165,7 +165,7 @@ export const setLimitTotal = async (tab: chrome.tabs.Tab, value: string) => {
   return await callChromeJs(tab, [value], async value => {
     try {
       // 设置卖出数量
-      window.setInputValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal', value);
+      window.setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal', value);
       await new Promise(resolve => setTimeout(resolve, 16));
       return { error: '', val: true };
     } catch (error: any) {
@@ -300,9 +300,9 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
       ) as HTMLSpanElement;
       if (!priceEl) throw new Error('价格元素不存在, 刷新页面, 请确认页面是否正确');
       const sellPrice = priceEl.textContent.trim();
-      window.setInputValue('input#limitPrice', sellPrice);
+      window.setValue('input#limitPrice', sellPrice);
       await new Promise(resolve => setTimeout(resolve, 16));
-      window.setInputValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
+      window.setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
       await new Promise(resolve => setTimeout(resolve, 16));
       const error = document.querySelector('div.bn-textField__line.data-error')?.querySelector('#limitTotal');
       if (error) {
@@ -571,7 +571,7 @@ export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) => {
       if (!limitTotals.length || limitTotals.length < 2) throw new Error('反向价格元素不存在, 请确认页面是否正确');
       const limitTotal = limitTotals[1] as any;
       // 卖出价格
-      window.setInputValue(limitTotal, price);
+      window.setValue(limitTotal, price);
       await new Promise(resolve => setTimeout(resolve, 16));
       return { error: '', val: true };
     } catch (error: any) {

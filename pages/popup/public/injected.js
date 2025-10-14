@@ -1,7 +1,7 @@
 (function () {
   console.log('content script - 注入');
 
-  window.setInputValue = (selector, value) => {
+  window.setValue = (selector, value) => {
     const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
     if (!input) throw new Error('input元素不存在');
     // eslint-disable-next-line no-undef
