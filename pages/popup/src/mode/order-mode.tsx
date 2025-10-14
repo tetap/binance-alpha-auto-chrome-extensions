@@ -12,7 +12,7 @@ import {
   getPrice,
   injectDependencies,
   isAuthModal,
-  jumpToBuy,
+  // jumpToBuy,
   setLimitTotal,
   setPrice,
   waitOrder,
@@ -200,8 +200,18 @@ export const OrderMode = ({
         await cancelOrder(tab);
         // 兜底卖出
         await backSell(tab, api, symbol, appendLog, timeout);
+
+        // 刷新余额
+        const balance = await getBalance(tab);
+
+        if (!balance) throw new Error('获取余额失败');
+
+        appendLog(`刷新余额: ${balance}`, 'info');
+
+        setCurrentBalance(balance);
+
         // 回到买入面板
-        await jumpToBuy(tab);
+        // await jumpToBuy(tab);
 
         // k线检测
         const stable = await checkMarketStable(api, symbol);
@@ -278,15 +288,6 @@ export const OrderMode = ({
 
         // 等待2s
         await new Promise(resolve => setTimeout(resolve, sleepTime));
-
-        // 刷新余额
-        const balance = await getBalance(tab);
-
-        if (!balance) throw new Error('获取余额失败');
-
-        appendLog(`刷新余额: ${balance}`, 'info');
-
-        setCurrentBalance(balance);
 
         setNum(Date.now());
 
