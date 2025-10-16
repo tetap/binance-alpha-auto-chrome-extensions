@@ -190,6 +190,11 @@ export const callSubmit = async (tab: chrome.tabs.Tab) =>
       // 1000 / 30 每秒30fps 最多等待1秒
       while (count < 32) {
         await new Promise(resolve => setTimeout(resolve, 1000 / 30));
+        // 等到第二次完整校验。避免多个风险弹窗
+        if (click) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return { error: '', val: false };
+        }
         const btn = document
           .querySelector(`div[role='dialog'][class='bn-modal-wrap data-size-small']`)
           ?.querySelector('.bn-button__primary') as HTMLButtonElement;
@@ -197,11 +202,6 @@ export const callSubmit = async (tab: chrome.tabs.Tab) =>
           btn.click();
           click = true;
           await new Promise(resolve => setTimeout(resolve, 500));
-        }
-        // 等到第二次完整校验。避免多个风险弹窗
-        if (click) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          return { error: '', val: false };
         }
         count++;
       }
