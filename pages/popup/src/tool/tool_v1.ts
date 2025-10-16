@@ -184,6 +184,7 @@ export const callSubmit = async (tab: chrome.tabs.Tab) =>
       ) as HTMLButtonElement;
       if (!submitBtn) throw new Error('提交按钮不存在, 请确认页面是否正确');
       submitBtn.click();
+      let click = false;
       // 关闭弹窗
       let count = 0;
       // 1000 / 30 每秒30fps 最多等待1秒
@@ -194,6 +195,11 @@ export const callSubmit = async (tab: chrome.tabs.Tab) =>
           ?.querySelector('.bn-button__primary') as HTMLButtonElement;
         if (btn) {
           btn.click();
+          click = true;
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        // 等到第二次完整校验。避免多个风险弹窗
+        if (click) {
           await new Promise(resolve => setTimeout(resolve, 500));
           return { error: '', val: false };
         }
