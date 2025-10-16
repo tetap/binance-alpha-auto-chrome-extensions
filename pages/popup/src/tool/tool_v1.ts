@@ -9,24 +9,13 @@ export const injectDependencies = async (tab: chrome.tabs.Tab) => {
     target: { tabId: tab.id! },
     world: 'MAIN',
     func: () => {
-      window.setValue = (selector, value) => {
-        const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
-        if (!input) throw new Error('input元素不存在');
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-        nativeInputValueSetter.call(input, value);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-      };
-
       Object.defineProperty(navigator, 'credentials', {
         value: {
           get: async () => {
-            console.warn('[CEB] WebAuthn get disabled by extension');
-            throw new DOMException('WebAuthn disabled by extension', 'NotAllowedError');
+            throw new DOMException('NotAllowedError', 'NotAllowedError');
           },
           create: async () => {
-            console.warn('[CEB] WebAuthn create disabled by extension');
-            throw new DOMException('WebAuthn disabled by extension', 'NotAllowedError');
+            throw new DOMException('NotAllowedError', 'NotAllowedError');
           },
         },
         configurable: false,
@@ -43,7 +32,6 @@ export const callChromeJs = async <T, A extends any[] = []>(
   const [result] = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
     func,
-    world: 'MAIN',
     args: (args ?? []) as A,
   });
 
@@ -136,8 +124,16 @@ export const setPrice = async (tab: chrome.tabs.Tab, price: string) => {
   await injectDependencies(tab);
   return await callChromeJs(tab, [price], async price => {
     try {
+      const setValue = (selector: string | HTMLInputElement, value: string) => {
+        const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
+        if (!input) throw new Error('input元素不存在');
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+        nativeInputValueSetter.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      };
       // 卖出价格
-      window.setValue('input#limitPrice', price);
+      setValue('input#limitPrice', price);
       await new Promise(resolve => setTimeout(resolve, 16));
       return { error: '', val: true };
     } catch (error: any) {
@@ -150,8 +146,16 @@ export const setRangeValue = async (tab: chrome.tabs.Tab, value: string) => {
   await injectDependencies(tab);
   return await callChromeJs(tab, [value], async value => {
     try {
+      const setValue = (selector: string | HTMLInputElement, value: string) => {
+        const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
+        if (!input) throw new Error('input元素不存在');
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+        nativeInputValueSetter.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      };
       // 设置卖出数量
-      window.setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', value);
+      setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', value);
       await new Promise(resolve => setTimeout(resolve, 16));
       return { error: '', val: true };
     } catch (error: any) {
@@ -164,8 +168,16 @@ export const setLimitTotal = async (tab: chrome.tabs.Tab, value: string) => {
   await injectDependencies(tab);
   return await callChromeJs(tab, [value], async value => {
     try {
+      const setValue = (selector: string | HTMLInputElement, value: string) => {
+        const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
+        if (!input) throw new Error('input元素不存在');
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+        nativeInputValueSetter.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      };
       // 设置卖出数量
-      window.setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal', value);
+      setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal', value);
       await new Promise(resolve => setTimeout(resolve, 16));
       return { error: '', val: true };
     } catch (error: any) {
@@ -306,9 +318,17 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
       ) as HTMLSpanElement;
       if (!priceEl) throw new Error('价格元素不存在, 刷新页面, 请确认页面是否正确');
       const sellPrice = priceEl.textContent.trim();
-      window.setValue('input#limitPrice', sellPrice);
+      const setValue = (selector: string | HTMLInputElement, value: string) => {
+        const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
+        if (!input) throw new Error('input元素不存在');
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+        nativeInputValueSetter.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      setValue('input#limitPrice', sellPrice);
       await new Promise(resolve => setTimeout(resolve, 16));
-      window.setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
+      setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
       await new Promise(resolve => setTimeout(resolve, 16));
       const error = document.querySelector('div.bn-textField__line.data-error')?.querySelector('#limitTotal');
       if (error) {
@@ -576,8 +596,16 @@ export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) => {
       const limitTotals = document.querySelectorAll('input#limitTotal');
       if (!limitTotals.length || limitTotals.length < 2) throw new Error('反向价格元素不存在, 请确认页面是否正确');
       const limitTotal = limitTotals[1] as any;
+      const setValue = (selector: string | HTMLInputElement, value: string) => {
+        const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
+        if (!input) throw new Error('input元素不存在');
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+        nativeInputValueSetter.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      };
       // 卖出价格
-      window.setValue(limitTotal, price);
+      setValue(limitTotal, price);
       await new Promise(resolve => setTimeout(resolve, 16));
       return { error: '', val: true };
     } catch (error: any) {
