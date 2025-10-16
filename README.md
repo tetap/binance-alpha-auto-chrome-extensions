@@ -11,6 +11,13 @@
 
 </div>
 
+
+## 更多版本
+
+Android - [Github](https://github.com/tetap/binance-alpha-auto-android)
+
+Chrome Extension - [Github](https://github.com/tetap/binance-alpha-auto-chrome-extensions)
+
 ## 功能特点
 
 - **流水刷取**：自动操作交易，快速累计 Alpha 流水。
