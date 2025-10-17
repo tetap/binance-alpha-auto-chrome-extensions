@@ -4,7 +4,6 @@ import {
   backSell,
   callSubmit,
   cancelOrder,
-  checkMarketStable,
   checkUnknownModal,
   closeReverseOrder,
   getBalance,
@@ -18,8 +17,15 @@ import {
   waitOrder,
 } from '../tool/tool_v1';
 import { useStorage } from '@extension/shared';
-import { orderSettingStorage, settingStorage, todayDealStorage, todayNoMulDealStorage } from '@extension/storage';
+import {
+  orderSettingStorage,
+  settingStorage,
+  StategySettingStorage,
+  todayDealStorage,
+  todayNoMulDealStorage,
+} from '@extension/storage';
 import { Button, cn, Input, Label, RadioGroup, RadioGroupItem } from '@extension/ui';
+import { checkMarketStable } from '@src/tool/strategy';
 import dayjs, { extend } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { floor } from 'lodash-es';
@@ -121,7 +127,10 @@ export const OrderMode = ({
       return;
     }
 
-    const options = await getOptions(e);
+    const options = await getOptions(e).catch(error => {
+      appendLog(error.message, 'error');
+      throw new Error(error.message);
+    });
 
     stopRef.current = false;
 
@@ -214,7 +223,7 @@ export const OrderMode = ({
         // await jumpToBuy(tab);
 
         // k线检测
-        const stable = await checkMarketStable(api, symbol);
+        const stable = await checkMarketStable(api, symbol, await StategySettingStorage.get());
 
         if (!stable.stable) {
           appendLog(stable.message, 'error');
@@ -241,8 +250,8 @@ export const OrderMode = ({
 
         appendLog(`获取到买入价格: ${buyPrice}`, 'info');
 
-        // buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.001).toString() : buyPrice; // 调整买入价
-        buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // 调整买入价
+        buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.001).toString() : buyPrice; // 调整买入价
+        // buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // 调整买入价
         // 关闭反向订单
         await closeReverseOrder(tab);
         // 操作写入买入价格

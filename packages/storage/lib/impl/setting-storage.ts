@@ -31,6 +31,9 @@ export type SettingState = {
   minSleep: string;
   // 最大时间间隔
   maxSleep: string;
+
+  minDiscount: string;
+  maxDiscount: string;
 };
 
 // eslint-disable-next-line import-x/exports-last
@@ -58,6 +61,9 @@ const storage = createStorage<SettingState>(
     runType: 'sum',
     minSleep: '1',
     maxSleep: '5',
+
+    minDiscount: '0.2',
+    maxDiscount: '0.5',
   },
   {
     storageEnum: StorageEnum.Local,

@@ -4,7 +4,6 @@ import {
   backSell,
   callSubmit,
   cancelOrder,
-  checkMarketStable,
   checkUnknownModal,
   getBalance,
   getId,
@@ -19,8 +18,9 @@ import {
   injectDependencies,
 } from '../tool/tool_v1';
 import { useStorage } from '@extension/shared';
-import { settingStorage, todayDealStorage, todayNoMulDealStorage } from '@extension/storage';
+import { settingStorage, StategySettingStorage, todayDealStorage, todayNoMulDealStorage } from '@extension/storage';
 import { Button, cn, Input, Label, RadioGroup, RadioGroupItem } from '@extension/ui';
+import { checkMarketStable } from '@src/tool/strategy';
 import dayjs, { extend } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { floor } from 'lodash-es';
@@ -60,12 +60,14 @@ export const ReverseMode = ({
       dot: string;
       minSleep: string;
       maxSleep: string;
+      minDiscount: string;
+      maxDiscount: string;
     };
 
-    if (!data.timeout || !data.count || !data.dot) {
+    if (!data.timeout || !data.count || !data.minDiscount || !data.maxDiscount) {
       throw new Error('参数不能为空');
     }
-    if (isNaN(Number(data.dot)) || isNaN(Number(data.count))) {
+    if (isNaN(Number(data.count)) || isNaN(Number(data.minDiscount)) || isNaN(Number(data.maxDiscount))) {
       throw new Error('参数必须为数字');
     }
     // 校验下单金额
@@ -88,6 +90,10 @@ export const ReverseMode = ({
       }
     } else {
       throw new Error('下单金额模式错误');
+    }
+
+    if (Number(data.minDiscount) > Number(data.maxDiscount)) {
+      throw new Error('最小折价率不能高度最高折价率');
     }
 
     const runNum = setting['runNum'];
@@ -122,7 +128,10 @@ export const ReverseMode = ({
       return;
     }
 
-    const options = await getOptions(e);
+    const options = await getOptions(e).catch(error => {
+      appendLog(error.message, 'error');
+      throw new Error(error.message);
+    });
 
     stopRef.current = false;
 
@@ -205,7 +214,7 @@ export const ReverseMode = ({
         // 回到买入面板
         await jumpToBuy(tab);
 
-        const stable = await checkMarketStable(api, symbol);
+        const stable = await checkMarketStable(api, symbol, await StategySettingStorage.get());
 
         if (!stable.stable) {
           appendLog(stable.message, 'error');
@@ -250,11 +259,19 @@ export const ReverseMode = ({
         // 设置买入金额
         await setLimitTotal(tab, amount);
 
-        // 设想反向订单价格
-        const num = parseFloat(buyPrice);
-        // 根据dot参数保留小数点位数
-        const basic = 1 * 10 ** Number(options.dot);
-        const truncated = Math.floor(num * basic) / basic;
+        // // 设想反向订单价格
+        // const num = parseFloat(buyPrice);
+        // // 根据dot参数保留小数点位数
+        // const basic = 1 * 10 ** Number(options.dot);
+        // const truncated = Math.floor(num * basic) / basic;
+
+        const discount = floor(
+          (Number(options.maxDiscount) - Number(options.minDiscount)) * Math.random() + Number(options.minDiscount),
+          2,
+        );
+
+        // 卖出价格
+        const truncated = (Number(buyPrice) * (1 - discount / 100)).toString();
 
         // 设置反向订单价格
         await setReversePrice(tab, truncated.toString());
@@ -347,7 +364,7 @@ export const ReverseMode = ({
 
   return (
     <form className="mt-4 flex w-full flex-col gap-4" onSubmit={handleSubmit}>
-      <div className="flex w-full max-w-sm items-center justify-between gap-3">
+      {/* <div className="flex w-full max-w-sm items-center justify-between gap-3">
         <Label htmlFor="dot" className="w-28 flex-none">
           出售保留小数点
         </Label>
@@ -360,6 +377,41 @@ export const ReverseMode = ({
           defaultValue={setting.dot ?? '3'}
           onChange={e => settingStorage.setVal({ dot: e.target.value ?? '' })}
         />
+      </div> */}
+
+      <div className="flex w-full max-w-sm items-center justify-between gap-3">
+        <Label className="w-28 flex-none">反向订单折价(%)</Label>
+        <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Input
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              disabled={runing}
+              spellCheck={false}
+              type="text"
+              name="minDiscount"
+              id="minDiscount"
+              placeholder={`最小折价(%)`}
+              defaultValue={setting.minDiscount ?? '0.3'}
+              onChange={e => settingStorage.setVal({ minDiscount: e.target.value ?? '' })}
+            />
+            <div>-</div>
+            <Input
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              type="text"
+              name="maxDiscount"
+              id="maxDiscount"
+              disabled={runing}
+              placeholder={`最大折价(%)`}
+              defaultValue={setting.maxDiscount ?? '0.5'}
+              onChange={e => settingStorage.setVal({ maxDiscount: e.target.value ?? '' })}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">

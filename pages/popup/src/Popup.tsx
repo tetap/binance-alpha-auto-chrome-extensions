@@ -6,10 +6,14 @@ import { getBalance } from './tool/tool_v1';
 import { isNewerVersion } from './tool/version';
 import { useLogger } from './useLogger';
 import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
-import { settingStorage, todayDealStorage, todayNoMulDealStorage } from '@extension/storage';
+import { settingStorage, StategySettingStorage, todayDealStorage, todayNoMulDealStorage } from '@extension/storage';
 import {
   Button,
+  ChevronsUpDown,
   cn,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
   ErrorDisplay,
   Input,
   Label,
@@ -30,9 +34,11 @@ import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 extend(utc);
 
 const Popup = () => {
+  const [isOpen, setIsOpen] = useState(false);
   const [updateInfo, setUpdateInfo] = useState({ update: false, version: '', url: '' });
   const [num, setNum] = useState(0);
   const setting = useStorage(settingStorage);
+  const strategy = useStorage(StategySettingStorage);
   const deal = useStorage(todayDealStorage);
   const noMulDeal = useStorage(todayNoMulDealStorage);
 
@@ -313,6 +319,112 @@ const Popup = () => {
               />
             </div>
           </div>
+
+          <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-4 flex w-full flex-col">
+            <div className="justify-beween flex items-center gap-4">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-between">
+                  <h4 className="text-sm font-semibold">高级设置</h4>
+                  <ChevronsUpDown />
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+            <CollapsibleContent className={cn('flex flex-col gap-2', isOpen && 'mt-4')}>
+              <div className="mb-2 flex flex-col gap-2">
+                <div className="flex w-full max-w-sm items-center justify-between gap-3">
+                  <Label htmlFor="upThreshold" className="w-28 flex-none">
+                    上涨趋势确认阈值
+                  </Label>
+                  <Input
+                    name="upThreshold"
+                    id="upThreshold"
+                    disabled={runing}
+                    defaultValue={strategy.upThreshold ?? 2}
+                    onChange={e => StategySettingStorage.setVal({ upThreshold: Number(e.target.value ?? '0') })}
+                  />
+                </div>
+                <div className="text-xs">💹: 相关指标有（n）个达标时，视为上涨趋势</div>
+              </div>
+              <div className="mb-2 flex flex-col gap-2">
+                <div className="flex w-full max-w-sm items-center justify-between gap-3">
+                  <Label htmlFor="limit" className="w-28 flex-none">
+                    k线数量
+                  </Label>
+                  <Input
+                    name="limit"
+                    id="limit"
+                    disabled={runing}
+                    defaultValue={strategy.limit ?? 15}
+                    onChange={e => StategySettingStorage.setVal({ limit: Number(e.target.value ?? '0') })}
+                  />
+                </div>
+                <div className="text-xs">💹: 用于判断的k线数量</div>
+              </div>
+              <div className="mb-2 flex flex-col gap-2">
+                <div className="flex w-full max-w-sm items-center justify-between gap-3">
+                  <Label htmlFor="toSlope" className="w-28 flex-none">
+                    线性趋势斜率
+                  </Label>
+                  <Input
+                    name="toSlope"
+                    id="toSlope"
+                    disabled={runing}
+                    defaultValue={strategy.toSlope ?? 0.000001}
+                    onChange={e => StategySettingStorage.setVal({ toSlope: Number(e.target.value ?? '0') })}
+                  />
+                </div>
+                <div className="text-xs">
+                  💹:
+                  线性趋势斜率，设置为0则代表横盘时也可交易，这是一个曲率，一般你只需要改最后一位小数，比如0.000003，就是更严格的上涨曲线判断
+                </div>
+              </div>
+
+              <div className="mb-2 flex flex-col gap-2">
+                <div className="flex w-full max-w-sm items-center justify-between gap-3">
+                  <Label htmlFor="toSlope" className="w-28 flex-none">
+                    动量连续上升检测
+                  </Label>
+                  <Input
+                    name="confirm"
+                    id="confirm"
+                    disabled={runing}
+                    defaultValue={strategy.confirm ?? 3}
+                    onChange={e => StategySettingStorage.setVal({ confirm: Number(e.target.value ?? '0') })}
+                  />
+                </div>
+                <div className="text-xs">💹: 动量检测次数</div>
+              </div>
+
+              <div className="mb-2 flex flex-col gap-2">
+                <div className="flex w-full max-w-sm items-center justify-between gap-3">
+                  <Label htmlFor="short" className="w-28 flex-none">
+                    短期均线与长期均线方向差异
+                  </Label>
+                  <div className="flex w-full items-center gap-2">
+                    <Input
+                      name="short"
+                      id="short"
+                      placeholder="short"
+                      disabled={runing}
+                      defaultValue={strategy.short ?? 5}
+                      onChange={e => StategySettingStorage.setVal({ short: Number(e.target.value ?? '0') })}
+                    />
+                    <Input
+                      name="long"
+                      id="long"
+                      placeholder="long"
+                      disabled={runing}
+                      defaultValue={strategy.long ?? 20}
+                      onChange={e => StategySettingStorage.setVal({ long: Number(e.target.value ?? '0') })}
+                    />
+                  </div>
+                </div>
+                <div className="text-xs">
+                  💹: 参数一： 短期均线周期，反映最近的价格趋势变化，参数二：长期均线周期，反映整体趋势方向
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           <div>
             <div>
