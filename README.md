@@ -43,13 +43,4 @@ Chrome Extension - [Github](https://github.com/tetap/binance-alpha-auto-chrome-e
     <img alt="Logo" src="./docs/wechat.jpg" />
 </picture>
 
-## 进群交流
-
-有任何问题哦度可以在issues反馈，或者加入我的qq群反馈。
-
-点击链接加入群聊：https://qm.qq.com/q/sxomf5yebY
-
-<picture>
-    <img alt="Logo" src="./docs/qrcode.jpg" />
-</picture>
 
