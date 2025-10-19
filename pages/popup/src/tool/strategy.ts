@@ -96,6 +96,38 @@ export const algo4_VolatilityBreak = (klines: string[][], lookback = 20) => {
  * 算法5：即时加速度检测
  * 连续上涨且涨幅递增，表示加速度上行
  */
+// export const algo5_Acceleration = (klines: string[][], lookback = 10) => {
+//   const data = extractClosePrices(klines);
+//   if (data.length < lookback + 2) return false;
+
+//   // 计算价格变化量（速度）
+//   const velocity = [];
+//   for (let i = 1; i < data.length; i++) {
+//     velocity.push(data[i] - data[i - 1]);
+//   }
+
+//   // 计算加速度（速度的变化量）
+//   const acceleration = [];
+//   for (let i = 1; i < velocity.length; i++) {
+//     acceleration.push(velocity[i] - velocity[i - 1]);
+//   }
+
+//   // 取最近 lookback 条加速度
+//   const recent = acceleration.slice(-lookback);
+
+//   // 判断加速度是否连续递增（趋势增强）
+//   let increasing = 0;
+//   for (let i = 1; i < recent.length; i++) {
+//     if (recent[i] > recent[i - 1]) increasing++;
+//   }
+
+//   // 计算平均加速度
+//   const avgAcc = recent.reduce((a, b) => a + b, 0) / recent.length;
+
+//   // 条件：超过 70% 递增，且平均加速度 > 0
+//   return increasing / recent.length > 0.7 && avgAcc > 0;
+// };
+
 export const algo5_Acceleration = (klines: string[][]) => {
   const data = extractClosePrices(klines);
   if (data.length < 4) return false;

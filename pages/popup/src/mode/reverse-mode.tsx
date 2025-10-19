@@ -241,7 +241,11 @@ export const ReverseMode = ({
 
         appendLog(`获取到买入价格: ${buyPrice}`, 'info');
 
-        buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // 调整买入价
+        // buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // 调整买入价
+        buyPrice =
+          stable.trend === '上涨趋势'
+            ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString()
+            : (Number(buyPrice) + Number(buyPrice) * 0.00001).toString(); // 调整买入价
 
         // 开启反向订单
         await openReverseOrder(tab);
@@ -267,7 +271,7 @@ export const ReverseMode = ({
 
         const discount = floor(
           (Number(options.maxDiscount) - Number(options.minDiscount)) * Math.random() + Number(options.minDiscount),
-          2,
+          6,
         );
 
         // 卖出价格
@@ -328,7 +332,7 @@ export const ReverseMode = ({
         if (error.message.includes('刷新页面')) {
           if (tab.id) await chrome.tabs.reload(tab.id);
           await new Promise(resolve => setTimeout(resolve, 5000));
-        } else if (index % 10 === 0) {
+        } else if (index % 10 === 0 || error.message.includes('不存在')) {
           if (tab.id) await chrome.tabs.reload(tab.id);
           await new Promise(resolve => setTimeout(resolve, 5000));
         }
