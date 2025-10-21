@@ -9,7 +9,7 @@ import {
   getId,
   getPrice,
   isAuthModal,
-  jumpToBuy,
+  // jumpToBuy,
   openReverseOrder,
   setLimitTotal,
   setPrice,
@@ -203,16 +203,27 @@ export const ReverseMode = ({
       try {
         let sleepTime = Math.floor(Math.random() * (maxSleep - minSleep + 1) + minSleep) * 1000;
 
-        // 等待1s
-        await new Promise(resolve => setTimeout(resolve, sleepTime));
         // 校验是否有未知弹窗
         await checkUnknownModal(tab);
         // 校验是否有未取消的订单
         await cancelOrder(tab);
         // 兜底卖出
         await backSell(tab, api, symbol, appendLog, timeout);
-        // 回到买入面板
-        await jumpToBuy(tab);
+
+        // 刷新余额
+        const balance = await getBalance(tab);
+
+        if (!balance) throw new Error('获取余额失败');
+
+        appendLog(`刷新余额: ${balance}`, 'info');
+
+        setCurrentBalance(balance);
+
+        setNum(Date.now());
+
+        sleepTime = Math.floor(Math.random() * (maxSleep - minSleep + 1) + minSleep) * 1000;
+
+        await new Promise(resolve => setTimeout(resolve, sleepTime));
 
         const stable = await checkMarketStable(api, symbol, await StategySettingStorage.get());
 
@@ -242,7 +253,7 @@ export const ReverseMode = ({
         appendLog(`获取到买入价格: ${buyPrice}`, 'info');
 
         // buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // 调整买入价
-        buyPrice =
+        const submitPrice =
           stable.trend === '上涨趋势'
             ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString()
             : (Number(buyPrice) + Number(buyPrice) * 0.00001).toString(); // 调整买入价
@@ -251,7 +262,7 @@ export const ReverseMode = ({
         await openReverseOrder(tab);
 
         // 操作写入买入价格
-        await setPrice(tab, buyPrice);
+        await setPrice(tab, submitPrice);
         // 计算买入金额
         const amount =
           options.orderAmountMode === 'Fixed'
@@ -301,26 +312,11 @@ export const ReverseMode = ({
 
         sleepTime = Math.floor(Math.random() * (maxSleep - minSleep + 1) + minSleep) * 1000;
 
-        await new Promise(resolve => setTimeout(resolve, sleepTime));
+        await new Promise(resolve => setTimeout(resolve, timeout * 1000));
 
         await cancelOrder(tab);
 
-        await backSell(tab, api, symbol, appendLog, timeout);
-
-        sleepTime = Math.floor(Math.random() * (maxSleep - minSleep + 1) + minSleep) * 1000;
-
-        await new Promise(resolve => setTimeout(resolve, sleepTime));
-
-        // 刷新余额
-        const balance = await getBalance(tab);
-
-        if (!balance) throw new Error('获取余额失败');
-
-        appendLog(`刷新余额: ${balance}`, 'info');
-
-        setCurrentBalance(balance);
-
-        setNum(Date.now());
+        // await backSell(tab, api, symbol, appendLog, timeout);
 
         const price = Number(await todayDealStorage.getVal(day));
 
