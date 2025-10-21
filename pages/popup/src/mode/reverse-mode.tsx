@@ -253,10 +253,13 @@ export const ReverseMode = ({
         appendLog(`获取到买入价格: ${buyPrice}`, 'info');
 
         // buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // 调整买入价
+        // const submitPrice =
+        //   stable.trend === '上涨趋势'
+        //     ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString()
+        //     : (Number(buyPrice) + Number(buyPrice) * 0.00001).toString(); // 调整买入价
+
         const submitPrice =
-          stable.trend === '上涨趋势'
-            ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString()
-            : (Number(buyPrice) + Number(buyPrice) * 0.00001).toString(); // 调整买入价
+          stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice;
 
         // 开启反向订单
         await openReverseOrder(tab);
