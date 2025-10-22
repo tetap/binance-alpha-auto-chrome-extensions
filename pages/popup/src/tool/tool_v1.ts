@@ -316,7 +316,7 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
       await new Promise(resolve => setTimeout(resolve, 300));
 
       const priceEl = document.querySelector(
-        `.ReactVirtualized__List div[class='flex-1 cursor-pointer']`,
+        `.ReactVirtualized__Grid__innerScrollContainer div.cursor-pointer`,
       ) as HTMLSpanElement;
       if (!priceEl) throw new Error('价格元素不存在, 刷新页面, 请确认页面是否正确');
       const sellPrice = priceEl.textContent.trim();
