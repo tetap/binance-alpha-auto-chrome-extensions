@@ -302,9 +302,9 @@ export const isAuthModal = async (tab: chrome.tabs.Tab) =>
   });
 
 // 检测是否有卖单
-export const getIsSell = async (tab: chrome.tabs.Tab) => {
+export const getIsSell = async (tab: chrome.tabs.Tab, checkPrice: string) => {
   await injectDependencies(tab);
-  return await callChromeJs(tab, [], async () => {
+  return await callChromeJs(tab, [checkPrice], async (checkPrice: string) => {
     try {
       const sellPanel = document.querySelector('.bn-tab__buySell[aria-controls="bn-tab-pane-1"]') as HTMLButtonElement;
       if (!sellPanel) {
@@ -315,11 +315,11 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
       sellPanel.click();
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      const priceEl = document.querySelector(
-        `.ReactVirtualized__Grid__innerScrollContainer div.cursor-pointer`,
-      ) as HTMLSpanElement;
-      if (!priceEl) throw new Error('价格元素不存在, 刷新页面, 请确认页面是否正确');
-      const sellPrice = priceEl.textContent.trim();
+      // const priceEl = document.querySelector(
+      //   `.ReactVirtualized__Grid__innerScrollContainer div.cursor-pointer`,
+      // ) as HTMLSpanElement;
+      // if (!priceEl) throw new Error('价格元素不存在, 刷新页面, 请确认页面是否正确');
+      // const sellPrice = priceEl.textContent.trim();
       const setValue = (selector: string | HTMLInputElement, value: string) => {
         const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
         if (!input) throw new Error('input元素不存在');
@@ -328,7 +328,7 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
       };
-      setValue('input#limitPrice', sellPrice);
+      setValue('input#limitPrice', checkPrice);
       await new Promise(resolve => setTimeout(resolve, 16));
       setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
       await new Promise(resolve => setTimeout(resolve, 16));
@@ -354,11 +354,13 @@ export const backSell = async (
 ) => {
   while (true) {
     try {
-      const isSell = await getIsSell(tab);
+      const checkPrice = await getPrice(symbol, api); // 获取价格
+      const isSell = await getIsSell(tab, checkPrice);
       if (!isSell && safe) {
         appendLog('没有发现卖单数据，强制刷新', 'error');
         await chrome.tabs.reload(tab.id!);
         await new Promise(resolve => setTimeout(resolve, 5000));
+        safe = false;
         continue;
       }
       if (!isSell) return;
@@ -629,6 +631,39 @@ export const waitBuyOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
         // 获取订单
         const orderList = Array.from(
           document.querySelectorAll('#bn-tab-pane-orderOrder td div[style="color: var(--color-Buy);'),
+        );
+        if (orderList.length === 0) break;
+        // 如果存在 且超时操作取消 并且返回超时 timeout 单位（s）
+        if (Date.now() - start > timeout * 1000) {
+          orderList.forEach(order => {
+            const evt = new MouseEvent('click', {
+              bubbles: true,
+              cancelable: true,
+              view: window,
+            });
+            order.parentNode?.parentNode?.querySelector('svg')?.dispatchEvent(evt);
+          });
+          console.log('等待订单超时，等待重试');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return { error: '等待订单超时，等待重试', val: true };
+        }
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      return { error: '', val: true };
+    } catch (error: any) {
+      return { error: error.message, val: false };
+    }
+  });
+
+export const waitSellOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
+  await callChromeJs(tab, [timeout], async timeout => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const start = Date.now();
+      while (true) {
+        // 获取订单
+        const orderList = Array.from(
+          document.querySelectorAll('#bn-tab-pane-orderOrder td div[style="color: var(--color-Sell);'),
         );
         if (orderList.length === 0) break;
         // 如果存在 且超时操作取消 并且返回超时 timeout 单位（s）

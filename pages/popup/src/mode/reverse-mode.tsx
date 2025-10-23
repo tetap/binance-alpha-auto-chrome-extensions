@@ -16,6 +16,7 @@ import {
   setReversePrice,
   waitBuyOrder,
   injectDependencies,
+  waitSellOrder,
 } from '../tool/tool_v1';
 import { useStorage } from '@extension/shared';
 import { settingStorage, StategySettingStorage, todayDealStorage, todayNoMulDealStorage } from '@extension/storage';
@@ -307,6 +308,8 @@ export const ReverseMode = ({
         }
         // 等待订单完成
         BuyOk = await waitBuyOrder(tab, timeout);
+
+        BuyOk = !(await waitSellOrder(tab, timeout));
 
         appendLog(`下单成功: 价格： ${buyPrice} 金额：${amount}`, 'success');
 
