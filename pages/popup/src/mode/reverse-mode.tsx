@@ -240,6 +240,8 @@ export const ReverseMode = ({
           appendLog(stable.message, 'success');
         }
 
+        // 开启反向订单
+        await openReverseOrder(tab);
         let buyPrice = await getPrice(symbol, api);
         appendLog(`保守设置次数:${count}`, 'info');
         for (let j = 0; j < count; j++) {
@@ -264,9 +266,6 @@ export const ReverseMode = ({
 
         const submitPrice =
           stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice;
-
-        // 开启反向订单
-        await openReverseOrder(tab);
 
         // 操作写入买入价格
         await setPrice(tab, submitPrice);

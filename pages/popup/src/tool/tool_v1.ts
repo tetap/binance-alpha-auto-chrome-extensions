@@ -77,7 +77,9 @@ export interface Trade {
 // 获取价格
 export const getPrice = async (symbol: string, api: string) => {
   api = api.lastIndexOf('/') === api.length - 1 ? api.slice(0, -1) : api;
-  const request = await fetch(`${api}/bapi/defi/v1/public/alpha-trade/agg-trades?symbol=${symbol}&limit=1`);
+  const request = await fetch(
+    `${api}/bapi/defi/v1/public/alpha-trade/agg-trades?symbol=${symbol}&limit=1&endTime=${Date.now()}000`,
+  );
   const json = (await request.json()) as { data: Trade[] };
   const cur = json.data[json.data.length - 1];
   return cur.p;
@@ -85,7 +87,9 @@ export const getPrice = async (symbol: string, api: string) => {
 
 export const getPriceList = async (symbol: string, api: string) => {
   api = api.lastIndexOf('/') === api.length - 1 ? api.slice(0, -1) : api;
-  const request = await fetch(`${api}/bapi/defi/v1/public/alpha-trade/agg-trades?symbol=${symbol}&limit=15`);
+  const request = await fetch(
+    `${api}/bapi/defi/v1/public/alpha-trade/agg-trades?symbol=${symbol}&limit=15&endTime=${Date.now()}000`,
+  );
   const json = (await request.json()) as { data: AggTrade[] };
   return json.data;
 };
