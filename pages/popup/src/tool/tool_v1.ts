@@ -332,10 +332,6 @@ export const getIsSell = async (tab: chrome.tabs.Tab) => {
       await new Promise(resolve => setTimeout(resolve, 16));
       setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
       await new Promise(resolve => setTimeout(resolve, 16));
-      const error = document.querySelector('div.bn-textField__line.data-error')?.querySelector('#limitTotal');
-      if (error) {
-        return { error: '', val: true };
-      }
       const input = document.querySelector(
         '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal',
       ) as HTMLInputElement;
