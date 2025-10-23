@@ -350,10 +350,17 @@ export const backSell = async (
   symbol: string,
   appendLog: (msg: string, type: 'success' | 'error' | 'info') => void,
   timeout: number = 3,
+  safe: boolean = false,
 ) => {
   while (true) {
     try {
       const isSell = await getIsSell(tab);
+      if (!isSell && safe) {
+        appendLog('没有发现卖单数据，强制刷新', 'error');
+        await chrome.tabs.reload(tab.id!);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        continue;
+      }
       if (!isSell) return;
       // await jumpToSell(tab); // 跳转卖出
       const price = await getPrice(symbol, api); // 获取价格
@@ -373,6 +380,7 @@ export const backSell = async (
       if (isAuth) await new Promise(resolve => setTimeout(resolve, 3000));
       // 等待订单
       await waitOrder(tab, timeout);
+      safe = false;
       appendLog(`卖出成功 价格：${sellPrice}`, 'success');
     } catch (error: any) {
       console.error(error);

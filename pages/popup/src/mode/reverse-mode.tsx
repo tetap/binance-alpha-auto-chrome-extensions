@@ -190,6 +190,7 @@ export const ReverseMode = ({
       setStartBalance(balance);
     }
     let index = 0;
+    let BuyOk = false;
     for (let i = 0; i < runNum; i++) {
       index++;
       injectDependencies(tab);
@@ -208,7 +209,9 @@ export const ReverseMode = ({
         // 校验是否有未取消的订单
         await cancelOrder(tab);
         // 兜底卖出
-        await backSell(tab, api, symbol, appendLog, timeout);
+        await backSell(tab, api, symbol, appendLog, timeout, BuyOk);
+
+        BuyOk = false;
 
         // 刷新余额
         const balance = await getBalance(tab);
@@ -303,7 +306,7 @@ export const ReverseMode = ({
           await new Promise(resolve => setTimeout(resolve, 3000));
         }
         // 等待订单完成
-        await waitBuyOrder(tab, timeout);
+        BuyOk = await waitBuyOrder(tab, timeout);
 
         appendLog(`下单成功: 价格： ${buyPrice} 金额：${amount}`, 'success');
 

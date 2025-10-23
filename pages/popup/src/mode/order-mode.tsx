@@ -200,6 +200,8 @@ export const OrderMode = ({
         break;
       }
 
+      let BuyOk = false;
+
       try {
         // 等待1s
         await new Promise(resolve => setTimeout(resolve, sleepTime));
@@ -208,7 +210,9 @@ export const OrderMode = ({
         // 校验是否有未取消的订单
         await cancelOrder(tab);
         // 兜底卖出
-        await backSell(tab, api, symbol, appendLog, timeout);
+        await backSell(tab, api, symbol, appendLog, timeout, BuyOk);
+
+        BuyOk = false;
 
         // 刷新余额
         const balance = await getBalance(tab);
@@ -277,7 +281,7 @@ export const OrderMode = ({
           await new Promise(resolve => setTimeout(resolve, 3000));
         }
         // 等待订单完成
-        await waitOrder(tab, timeout);
+        BuyOk = await waitOrder(tab, timeout);
 
         appendLog(`下单成功: 价格： ${buyPrice} 金额：${amount}`, 'success');
 
@@ -291,7 +295,7 @@ export const OrderMode = ({
 
         await new Promise(resolve => setTimeout(resolve, sleepTime));
 
-        await backSell(tab, api, symbol, appendLog, timeout);
+        await backSell(tab, api, symbol, appendLog, timeout, BuyOk);
 
         sleepTime = Math.floor(Math.random() * (maxSleep - minSleep + 1) + minSleep) * 1000;
 
