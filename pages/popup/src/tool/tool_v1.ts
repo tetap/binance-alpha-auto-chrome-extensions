@@ -129,10 +129,14 @@ export const setPrice = async (tab: chrome.tabs.Tab, price: string) => {
   return await callChromeJs(tab, [price], async price => {
     try {
       const setValue = (selector: string | HTMLInputElement, value: string) => {
-        const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
+        const input = (typeof selector === 'string' ? document.querySelector(selector) : selector) as HTMLInputElement;
         if (!input) throw new Error('input元素不存在');
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
         nativeInputValueSetter.call(input, value);
+        input.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        input.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        input.focus();
+        input.click();
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
       };
@@ -204,8 +208,8 @@ export const callSubmit = async (tab: chrome.tabs.Tab) =>
       // 关闭弹窗
       let count = 0;
       // 1000 / 30 每秒30fps 最多等待1秒
-      while (count < 32) {
-        await new Promise(resolve => setTimeout(resolve, 1000 / 30));
+      while (count < 10) {
+        await new Promise(resolve => setTimeout(resolve, 300));
         const btn = document
           .querySelector(`div[role='dialog'][class='bn-modal-wrap data-size-small']`)
           ?.querySelector('.bn-button__primary') as HTMLButtonElement;
