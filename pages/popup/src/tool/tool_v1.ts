@@ -99,9 +99,48 @@ export const jumpToSell = async (tab: chrome.tabs.Tab) =>
     try {
       const sellPanel = document.querySelector('.bn-tab__buySell[aria-controls="bn-tab-pane-1"]') as HTMLButtonElement;
       if (!sellPanel) throw new Error('卖出面板元素不存在, 请确认页面是否正确');
-      sellPanel.click();
+      ((element: HTMLElement) => {
+        // 获取元素的坐标位置
+        const rect = element.getBoundingClientRect();
+
+        // 设置随机偏移范围（例如：-5到+5像素的偏移）
+        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+        // 创建鼠标点击事件，设置自定义的随机坐标
+        const clickEvent = new MouseEvent('click', {
+          bubbles: true, // 事件可以冒泡
+          cancelable: true, // 事件可以取消
+          view: window, // 事件的视图对象
+          clientX: rect.left + randomOffsetX, // 设置随机横坐标
+          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+        });
+
+        // 触发点击事件
+        element.dispatchEvent(clickEvent);
+      })(sellPanel);
+
       await new Promise(resolve => setTimeout(resolve, 300));
-      sellPanel.click();
+      ((element: HTMLElement) => {
+        // 获取元素的坐标位置
+        const rect = element.getBoundingClientRect();
+
+        // 设置随机偏移范围（例如：-5到+5像素的偏移）
+        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+        // 创建鼠标点击事件，设置自定义的随机坐标
+        const clickEvent = new MouseEvent('click', {
+          bubbles: true, // 事件可以冒泡
+          cancelable: true, // 事件可以取消
+          view: window, // 事件的视图对象
+          clientX: rect.left + randomOffsetX, // 设置随机横坐标
+          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+        });
+
+        // 触发点击事件
+        element.dispatchEvent(clickEvent);
+      })(sellPanel);
       await new Promise(resolve => setTimeout(resolve, 300));
       return { error: '', val: true };
     } catch (error: any) {
@@ -114,9 +153,47 @@ export const jumpToBuy = async (tab: chrome.tabs.Tab) =>
     try {
       const buyPanel = document.querySelector('.bn-tab__buySell[aria-controls="bn-tab-pane-0"]') as HTMLButtonElement;
       if (!buyPanel) throw new Error('买入面板元素不存在, 请确认页面是否正确');
-      buyPanel.click();
+      ((element: HTMLElement) => {
+        // 获取元素的坐标位置
+        const rect = element.getBoundingClientRect();
+
+        // 设置随机偏移范围（例如：-5到+5像素的偏移）
+        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+        // 创建鼠标点击事件，设置自定义的随机坐标
+        const clickEvent = new MouseEvent('click', {
+          bubbles: true, // 事件可以冒泡
+          cancelable: true, // 事件可以取消
+          view: window, // 事件的视图对象
+          clientX: rect.left + randomOffsetX, // 设置随机横坐标
+          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+        });
+
+        // 触发点击事件
+        element.dispatchEvent(clickEvent);
+      })(buyPanel);
       await new Promise(resolve => setTimeout(resolve, 300));
-      buyPanel.click();
+      ((element: HTMLElement) => {
+        // 获取元素的坐标位置
+        const rect = element.getBoundingClientRect();
+
+        // 设置随机偏移范围（例如：-5到+5像素的偏移）
+        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+        // 创建鼠标点击事件，设置自定义的随机坐标
+        const clickEvent = new MouseEvent('click', {
+          bubbles: true, // 事件可以冒泡
+          cancelable: true, // 事件可以取消
+          view: window, // 事件的视图对象
+          clientX: rect.left + randomOffsetX, // 设置随机横坐标
+          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+        });
+
+        // 触发点击事件
+        element.dispatchEvent(clickEvent);
+      })(buyPanel);
       await new Promise(resolve => setTimeout(resolve, 300));
       return { error: '', val: true };
     } catch (error: any) {
@@ -133,10 +210,26 @@ export const setPrice = async (tab: chrome.tabs.Tab, price: string) => {
         if (!input) throw new Error('input元素不存在');
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
         nativeInputValueSetter.call(input, value);
-        input.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-        input.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-        input.focus();
-        input.click();
+        ((element: HTMLElement) => {
+          // 获取元素的坐标位置
+          const rect = element.getBoundingClientRect();
+
+          // 设置随机偏移范围（例如：-5到+5像素的偏移）
+          const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+          const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+          // 创建鼠标点击事件，设置自定义的随机坐标
+          const clickEvent = new MouseEvent('click', {
+            bubbles: true, // 事件可以冒泡
+            cancelable: true, // 事件可以取消
+            view: window, // 事件的视图对象
+            clientX: rect.left + randomOffsetX, // 设置随机横坐标
+            clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+          });
+
+          // 触发点击事件
+          element.dispatchEvent(clickEvent);
+        })(input);
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
       };
@@ -203,7 +296,26 @@ export const callSubmit = async (tab: chrome.tabs.Tab) =>
         '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] button.bn-button',
       ) as HTMLButtonElement;
       if (!submitBtn) throw new Error('提交按钮不存在, 请确认页面是否正确');
-      submitBtn.click();
+      ((element: HTMLElement) => {
+        // 获取元素的坐标位置
+        const rect = element.getBoundingClientRect();
+
+        // 设置随机偏移范围（例如：-5到+5像素的偏移）
+        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+        // 创建鼠标点击事件，设置自定义的随机坐标
+        const clickEvent = new MouseEvent('click', {
+          bubbles: true, // 事件可以冒泡
+          cancelable: true, // 事件可以取消
+          view: window, // 事件的视图对象
+          clientX: rect.left + randomOffsetX, // 设置随机横坐标
+          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+        });
+
+        // 触发点击事件
+        element.dispatchEvent(clickEvent);
+      })(submitBtn);
       let click = false;
       // 关闭弹窗
       let count = 0;
@@ -221,7 +333,26 @@ export const callSubmit = async (tab: chrome.tabs.Tab) =>
         }
 
         if (btn) {
-          btn.click();
+          ((element: HTMLElement) => {
+            // 获取元素的坐标位置
+            const rect = element.getBoundingClientRect();
+
+            // 设置随机偏移范围（例如：-5到+5像素的偏移）
+            const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+            const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+            // 创建鼠标点击事件，设置自定义的随机坐标
+            const clickEvent = new MouseEvent('click', {
+              bubbles: true, // 事件可以冒泡
+              cancelable: true, // 事件可以取消
+              view: window, // 事件的视图对象
+              clientX: rect.left + randomOffsetX, // 设置随机横坐标
+              clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+            });
+
+            // 触发点击事件
+            element.dispatchEvent(clickEvent);
+          })(btn);
           click = true;
           await new Promise(resolve => setTimeout(resolve, 500));
         }
@@ -242,7 +373,26 @@ export const callBuySubmit = async (tab: chrome.tabs.Tab) =>
       if (!btn) {
         throw new Error('买入按钮不存在, 刷新页面, 请确认页面是否正确');
       }
-      btn.click();
+      ((element: HTMLElement) => {
+        // 获取元素的坐标位置
+        const rect = element.getBoundingClientRect();
+
+        // 设置随机偏移范围（例如：-5到+5像素的偏移）
+        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+        // 创建鼠标点击事件，设置自定义的随机坐标
+        const clickEvent = new MouseEvent('click', {
+          bubbles: true, // 事件可以冒泡
+          cancelable: true, // 事件可以取消
+          view: window, // 事件的视图对象
+          clientX: rect.left + randomOffsetX, // 设置随机横坐标
+          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+        });
+
+        // 触发点击事件
+        element.dispatchEvent(clickEvent);
+      })(btn);
       // 关闭弹窗
       let count = 0;
       // 1000 / 30 每秒30fps 最多等待1秒
@@ -252,7 +402,26 @@ export const callBuySubmit = async (tab: chrome.tabs.Tab) =>
           .querySelector(`div[role='dialog'][class='bn-modal-wrap data-size-small']`)
           ?.querySelector('.bn-button__primary') as HTMLButtonElement;
         if (btn) {
-          btn.click();
+          ((element: HTMLElement) => {
+            // 获取元素的坐标位置
+            const rect = element.getBoundingClientRect();
+
+            // 设置随机偏移范围（例如：-5到+5像素的偏移）
+            const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+            const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+            // 创建鼠标点击事件，设置自定义的随机坐标
+            const clickEvent = new MouseEvent('click', {
+              bubbles: true, // 事件可以冒泡
+              cancelable: true, // 事件可以取消
+              view: window, // 事件的视图对象
+              clientX: rect.left + randomOffsetX, // 设置随机横坐标
+              clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+            });
+
+            // 触发点击事件
+            element.dispatchEvent(clickEvent);
+          })(btn);
           await new Promise(resolve => setTimeout(resolve, 500));
           return { error: '', val: false };
         }
@@ -318,9 +487,47 @@ export const getIsSell = async (tab: chrome.tabs.Tab, checkPrice: string) => {
       if (!sellPanel) {
         throw new Error('卖出面板元素不存在, 刷新页面, 请确认页面是否正确');
       }
-      sellPanel.click();
+      ((element: HTMLElement) => {
+        // 获取元素的坐标位置
+        const rect = element.getBoundingClientRect();
+
+        // 设置随机偏移范围（例如：-5到+5像素的偏移）
+        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+        // 创建鼠标点击事件，设置自定义的随机坐标
+        const clickEvent = new MouseEvent('click', {
+          bubbles: true, // 事件可以冒泡
+          cancelable: true, // 事件可以取消
+          view: window, // 事件的视图对象
+          clientX: rect.left + randomOffsetX, // 设置随机横坐标
+          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+        });
+
+        // 触发点击事件
+        element.dispatchEvent(clickEvent);
+      })(sellPanel);
       await new Promise(resolve => setTimeout(resolve, 300));
-      sellPanel.click();
+      ((element: HTMLElement) => {
+        // 获取元素的坐标位置
+        const rect = element.getBoundingClientRect();
+
+        // 设置随机偏移范围（例如：-5到+5像素的偏移）
+        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+        // 创建鼠标点击事件，设置自定义的随机坐标
+        const clickEvent = new MouseEvent('click', {
+          bubbles: true, // 事件可以冒泡
+          cancelable: true, // 事件可以取消
+          view: window, // 事件的视图对象
+          clientX: rect.left + randomOffsetX, // 设置随机横坐标
+          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+        });
+
+        // 触发点击事件
+        element.dispatchEvent(clickEvent);
+      })(sellPanel);
       await new Promise(resolve => setTimeout(resolve, 300));
 
       // const priceEl = document.querySelector(
@@ -541,13 +748,54 @@ export const cancelOrder = async (tab: chrome.tabs.Tab) =>
     ) as HTMLButtonElement;
     // 如果不存在则代表未有订单
     if (cancelAll) {
-      cancelAll.click();
+      ((element: HTMLElement) => {
+        // 获取元素的坐标位置
+        const rect = element.getBoundingClientRect();
+
+        // 设置随机偏移范围（例如：-5到+5像素的偏移）
+        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+        // 创建鼠标点击事件，设置自定义的随机坐标
+        const clickEvent = new MouseEvent('click', {
+          bubbles: true, // 事件可以冒泡
+          cancelable: true, // 事件可以取消
+          view: window, // 事件的视图对象
+          clientX: rect.left + randomOffsetX, // 设置随机横坐标
+          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+        });
+
+        // 触发点击事件
+        element.dispatchEvent(clickEvent);
+      })(cancelAll);
+
       await new Promise(resolve => setTimeout(resolve, 300));
       // 确认弹窗
       const btn = document.querySelector(
         '.bn-modal-confirm .bn-modal-confirm-actions .bn-button__primary',
       ) as HTMLButtonElement;
-      if (btn) btn.click();
+      if (btn) {
+        ((element: HTMLElement) => {
+          // 获取元素的坐标位置
+          const rect = element.getBoundingClientRect();
+
+          // 设置随机偏移范围（例如：-5到+5像素的偏移）
+          const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+          const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+          // 创建鼠标点击事件，设置自定义的随机坐标
+          const clickEvent = new MouseEvent('click', {
+            bubbles: true, // 事件可以冒泡
+            cancelable: true, // 事件可以取消
+            view: window, // 事件的视图对象
+            clientX: rect.left + randomOffsetX, // 设置随机横坐标
+            clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+          });
+
+          // 触发点击事件
+          element.dispatchEvent(clickEvent);
+        })(btn);
+      }
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
@@ -580,7 +828,28 @@ export const closeReverseOrder = async (tab: chrome.tabs.Tab) =>
       if (btn) {
         const isChecked = btn.getAttribute('aria-checked') === 'true';
         // 点击反向按钮
-        if (isChecked) btn.click();
+        if (isChecked) {
+          ((element: HTMLElement) => {
+            // 获取元素的坐标位置
+            const rect = element.getBoundingClientRect();
+
+            // 设置随机偏移范围（例如：-5到+5像素的偏移）
+            const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+            const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+            // 创建鼠标点击事件，设置自定义的随机坐标
+            const clickEvent = new MouseEvent('click', {
+              bubbles: true, // 事件可以冒泡
+              cancelable: true, // 事件可以取消
+              view: window, // 事件的视图对象
+              clientX: rect.left + randomOffsetX, // 设置随机横坐标
+              clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+            });
+
+            // 触发点击事件
+            element.dispatchEvent(clickEvent);
+          })(btn);
+        }
       }
       return { error: '', val: true };
     } catch (error: any) {
@@ -598,7 +867,28 @@ export const openReverseOrder = async (tab: chrome.tabs.Tab) =>
       if (btn) {
         const isChecked = btn.getAttribute('aria-checked') === 'true';
         // 点击反向按钮
-        if (!isChecked) btn.click();
+        if (!isChecked) {
+          ((element: HTMLElement) => {
+            // 获取元素的坐标位置
+            const rect = element.getBoundingClientRect();
+
+            // 设置随机偏移范围（例如：-5到+5像素的偏移）
+            const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+            const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+            // 创建鼠标点击事件，设置自定义的随机坐标
+            const clickEvent = new MouseEvent('click', {
+              bubbles: true, // 事件可以冒泡
+              cancelable: true, // 事件可以取消
+              view: window, // 事件的视图对象
+              clientX: rect.left + randomOffsetX, // 设置随机横坐标
+              clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+            });
+
+            // 触发点击事件
+            element.dispatchEvent(clickEvent);
+          })(btn);
+        }
       }
       return { error: '', val: true };
     } catch (error: any) {
@@ -751,14 +1041,53 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
               const btn = root.querySelector('.bidscls-btnLink2') as HTMLButtonElement;
               if (btn) {
                 // 跳转二次验证
-                btn.click();
+
+                ((element: HTMLElement) => {
+                  // 获取元素的坐标位置
+                  const rect = element.getBoundingClientRect();
+
+                  // 设置随机偏移范围（例如：-5到+5像素的偏移）
+                  const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+                  const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+                  // 创建鼠标点击事件，设置自定义的随机坐标
+                  const clickEvent = new MouseEvent('click', {
+                    bubbles: true, // 事件可以冒泡
+                    cancelable: true, // 事件可以取消
+                    view: window, // 事件的视图对象
+                    clientX: rect.left + randomOffsetX, // 设置随机横坐标
+                    clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+                  });
+
+                  // 触发点击事件
+                  element.dispatchEvent(clickEvent);
+                })(btn);
               }
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
             const steps = root.querySelectorAll('.bn-mfa-overview-step-title');
             const sfzapp = Array.from(steps).find(c => c.innerHTML.includes('身份验证')) as HTMLButtonElement;
             if (sfzapp) {
-              sfzapp.click();
+              ((element: HTMLElement) => {
+                // 获取元素的坐标位置
+                const rect = element.getBoundingClientRect();
+
+                // 设置随机偏移范围（例如：-5到+5像素的偏移）
+                const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
+                const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+
+                // 创建鼠标点击事件，设置自定义的随机坐标
+                const clickEvent = new MouseEvent('click', {
+                  bubbles: true, // 事件可以冒泡
+                  cancelable: true, // 事件可以取消
+                  view: window, // 事件的视图对象
+                  clientX: rect.left + randomOffsetX, // 设置随机横坐标
+                  clientY: rect.top + randomOffsetY, // 设置随机纵坐标
+                });
+
+                // 触发点击事件
+                element.dispatchEvent(clickEvent);
+              })(sfzapp);
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
             // 判断是否是身份验证器
