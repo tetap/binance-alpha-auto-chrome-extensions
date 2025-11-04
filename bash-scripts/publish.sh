@@ -3,6 +3,7 @@
 version=$(jq -r '.version' package.json)
 
 # 执行update_version.sh更新版本号
+echo version: $version
 
 # 拆分版本号 (major.minor.patch)
 IFS='.' read -r major minor patch <<< "$version"
