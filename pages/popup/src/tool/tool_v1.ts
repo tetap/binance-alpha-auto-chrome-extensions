@@ -451,7 +451,7 @@ export const waitOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
               cancelable: true,
               view: window,
             });
-            order.querySelector('td[aria-colindex="9"] svg')?.dispatchEvent(evt);
+            order.querySelector('td[aria-colindex="10"] svg')?.dispatchEvent(evt);
           });
           await new Promise(resolve => setTimeout(resolve, 500));
           return { error: '等待订单超时，等待重试', val: true };
@@ -744,7 +744,7 @@ export const cancelOrder = async (tab: chrome.tabs.Tab) =>
   await callChromeJs(tab, [], async () => {
     // 检测是否有订单
     const cancelAll = document.querySelector(
-      '#bn-tab-pane-orderOrder th[aria-colindex="9"] div[class="text-TextLink cursor-pointer"]',
+      '#bn-tab-pane-orderOrder th[aria-colindex="10"] div[class="text-TextLink cursor-pointer"]',
     ) as HTMLButtonElement;
     // 如果不存在则代表未有订单
     if (cancelAll) {
@@ -810,7 +810,7 @@ export const cancelOrder = async (tab: chrome.tabs.Tab) =>
           cancelable: true,
           view: window,
         });
-        order.querySelector('td[aria-colindex="9"] svg')?.dispatchEvent(evt);
+        order.querySelector('td[aria-colindex="10"] svg')?.dispatchEvent(evt);
       });
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
