@@ -3,8 +3,6 @@
       <img alt="Logo" src="./docs/app.png" />
   </picture>
 
-## 🚀 邀请链接 [点击直达](https://accounts.maxweb.black/register?ref=TETAP)
-
 ## 项目介绍
 
 一个基于 Chrome 扩展的 Binance Alpha 交易工具。
