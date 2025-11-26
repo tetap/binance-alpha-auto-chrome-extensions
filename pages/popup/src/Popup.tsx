@@ -2,7 +2,7 @@ import '@src/style/Popup.css';
 import { OrderMode } from './mode/order-mode';
 import { ReverseMode } from './mode/reverse-mode';
 import { base32Encode, parseMigrationQRCode } from './tool/protobuf';
-import { getBalance } from './tool/tool_v1';
+import { getBalance, injectDependencies } from './tool/tool_v1';
 import { isNewerVersion } from './tool/version';
 import { useLogger } from './useLogger';
 import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
@@ -133,6 +133,7 @@ const Popup = () => {
     (async (setStartBalance, setCurrentBalance, appendLog) => {
       try {
         const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
+        await injectDependencies(tab);
         const balance = await getBalance(tab);
         setStartBalance(balance);
         setCurrentBalance(balance);

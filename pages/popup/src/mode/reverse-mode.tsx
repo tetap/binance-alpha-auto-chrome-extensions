@@ -17,6 +17,8 @@ import {
   waitBuyOrder,
   injectDependencies,
   waitSellOrder,
+  startRandom,
+  stopRandom,
 } from '../tool/tool_v1';
 import { useStorage } from '@extension/shared';
 import { settingStorage, StategySettingStorage, todayDealStorage, todayNoMulDealStorage } from '@extension/storage';
@@ -192,6 +194,8 @@ export const ReverseMode = ({
     }
     let index = 0;
     let BuyOk = false;
+    await injectDependencies(tab);
+    await startRandom(tab);
     for (let i = 0; i < runNum; i++) {
       index++;
       injectDependencies(tab);
@@ -303,7 +307,7 @@ export const ReverseMode = ({
         // 出现验证弹窗等待
         if (isAuth) {
           appendLog('出现验证码等待过验证', 'info');
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await new Promise(resolve => setTimeout(resolve, 10000));
         }
         // 等待订单完成
         BuyOk = await waitBuyOrder(tab, timeout);
@@ -356,6 +360,8 @@ export const ReverseMode = ({
     balance = await getBalance(tab);
 
     if (!balance) throw new Error('获取余额失败');
+
+    await stopRandom(tab);
 
     appendLog(`刷新余额: ${balance}`, 'info');
 

@@ -1,6 +1,12 @@
 declare global {
   interface Window {
     setValue: (selector: string, value: string) => void;
+    dispatchMouseEvent: (selector: string | Element) => Promise<void>;
+    randomClickPoint: (selector: string | Element) => { clientX: number; clientY: number };
+    humanType: (input: HTMLInputElement, text: string, minDelay?: number, maxDelay?: number) => Promise<void>;
+    startIdle: () => void;
+    stopIdle: () => void;
+    idleHumanSimulator: any;
   }
 }
 
@@ -9,6 +15,126 @@ export const injectDependencies = async (tab: chrome.tabs.Tab) => {
     target: { tabId: tab.id! },
     world: 'MAIN',
     func: () => {
+      window.dispatchMouseEvent = async (el: string | Element) => {
+        const types = ['mousemove', 'mouseenter', 'mouseover', 'mousedown', 'mouseup', 'click'];
+        for (const type of types) {
+          const event = new MouseEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            ...window.randomClickPoint(el),
+          });
+          if (el instanceof Element) {
+            el.dispatchEvent(event);
+          } else {
+            document.querySelector(el)?.dispatchEvent(event);
+          }
+          await new Promise(r => setTimeout(r, 33));
+        }
+      };
+
+      window.randomClickPoint = (el: string | Element) => {
+        const rect =
+          el instanceof Element ? el.getBoundingClientRect() : document.querySelector(el)!.getBoundingClientRect();
+        return {
+          clientX: rect.left + rect.width * (0.2 + Math.random() * 0.6), // 避免点击到边缘
+          clientY: rect.top + rect.height * (0.2 + Math.random() * 0.6),
+        };
+      };
+
+      window.humanType = async (input: HTMLInputElement, text: string, minDelay = 30, maxDelay = 80) => {
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+
+        input.focus();
+
+        for (const char of text) {
+          // keydown
+          input.dispatchEvent(new KeyboardEvent('keydown', { key: char, bubbles: true }));
+
+          // beforeinput
+          input.dispatchEvent(
+            new InputEvent('beforeinput', {
+              data: char,
+              inputType: 'insertText',
+              bubbles: true,
+            }),
+          );
+
+          // 原生 setter 写入字符
+          nativeInputValueSetter.call(input, input.value + char);
+
+          // input
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+
+          // keyup
+          input.dispatchEvent(new KeyboardEvent('keyup', { key: char, bubbles: true }));
+
+          // 随机停顿（拟人化）
+          await new Promise(r => setTimeout(r, minDelay + Math.random() * (maxDelay - minDelay)));
+        }
+      };
+
+      if (!window.idleHumanSimulator) {
+        window.idleHumanSimulator = {
+          mouseTimer: null as number | null,
+          scrollTimer: null as number | null,
+          active: false,
+
+          start() {
+            if (this.active) return;
+            this.active = true;
+            this.simulateMouseMovement();
+            this.simulateScroll();
+          },
+
+          stop() {
+            this.active = false;
+            if (this.mouseTimer) {
+              clearTimeout(this.mouseTimer);
+              this.mouseTimer = null;
+            }
+            if (this.scrollTimer) {
+              clearTimeout(this.scrollTimer);
+              this.scrollTimer = null;
+            }
+          },
+
+          simulateMouseMovement() {
+            if (!this.active) return;
+
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            const x = Math.random() * w;
+            const y = Math.random() * h;
+
+            const evt = new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true });
+            document.documentElement.dispatchEvent(evt);
+
+            const nextMove = 300 + Math.random() * 1700;
+            this.mouseTimer = window.setTimeout(() => this.simulateMouseMovement(), nextMove);
+          },
+
+          simulateScroll() {
+            if (!this.active) return;
+
+            const direction = Math.random() > 0.5 ? 1 : -1;
+            const distance = 50 + Math.random() * 200;
+
+            window.scrollBy({ top: direction * distance, behavior: 'smooth' });
+
+            const nextScroll = 2000 + Math.random() * 8000;
+            this.scrollTimer = window.setTimeout(() => this.simulateScroll(), nextScroll);
+          },
+        };
+      }
+
+      // 启动模拟
+      window.startIdle = () => window.idleHumanSimulator.start();
+
+      // 随时停止
+      window.stopIdle = () => window.idleHumanSimulator.stop();
+
       Object.defineProperty(navigator, 'credentials', {
         value: {
           get: async () => {
@@ -31,6 +157,7 @@ export const callChromeJs = async <T, A extends any[] = []>(
 ): Promise<T> => {
   const [result] = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     func,
     args: (args ?? []) as A,
   });
@@ -99,48 +226,13 @@ export const jumpToSell = async (tab: chrome.tabs.Tab) =>
     try {
       const sellPanel = document.querySelector('.bn-tab__buySell[aria-controls="bn-tab-pane-1"]') as HTMLButtonElement;
       if (!sellPanel) throw new Error('卖出面板元素不存在, 请确认页面是否正确');
-      ((element: HTMLElement) => {
-        // 获取元素的坐标位置
-        const rect = element.getBoundingClientRect();
 
-        // 设置随机偏移范围（例如：-5到+5像素的偏移）
-        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-        // 创建鼠标点击事件，设置自定义的随机坐标
-        const clickEvent = new MouseEvent('click', {
-          bubbles: true, // 事件可以冒泡
-          cancelable: true, // 事件可以取消
-          view: window, // 事件的视图对象
-          clientX: rect.left + randomOffsetX, // 设置随机横坐标
-          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-        });
-
-        // 触发点击事件
-        element.dispatchEvent(clickEvent);
-      })(sellPanel);
+      await window.dispatchMouseEvent(sellPanel);
 
       await new Promise(resolve => setTimeout(resolve, 300));
-      ((element: HTMLElement) => {
-        // 获取元素的坐标位置
-        const rect = element.getBoundingClientRect();
 
-        // 设置随机偏移范围（例如：-5到+5像素的偏移）
-        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+      await window.dispatchMouseEvent(sellPanel);
 
-        // 创建鼠标点击事件，设置自定义的随机坐标
-        const clickEvent = new MouseEvent('click', {
-          bubbles: true, // 事件可以冒泡
-          cancelable: true, // 事件可以取消
-          view: window, // 事件的视图对象
-          clientX: rect.left + randomOffsetX, // 设置随机横坐标
-          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-        });
-
-        // 触发点击事件
-        element.dispatchEvent(clickEvent);
-      })(sellPanel);
       await new Promise(resolve => setTimeout(resolve, 300));
       return { error: '', val: true };
     } catch (error: any) {
@@ -153,47 +245,12 @@ export const jumpToBuy = async (tab: chrome.tabs.Tab) =>
     try {
       const buyPanel = document.querySelector('.bn-tab__buySell[aria-controls="bn-tab-pane-0"]') as HTMLButtonElement;
       if (!buyPanel) throw new Error('买入面板元素不存在, 请确认页面是否正确');
-      ((element: HTMLElement) => {
-        // 获取元素的坐标位置
-        const rect = element.getBoundingClientRect();
 
-        // 设置随机偏移范围（例如：-5到+5像素的偏移）
-        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
+      await window.dispatchMouseEvent(buyPanel);
 
-        // 创建鼠标点击事件，设置自定义的随机坐标
-        const clickEvent = new MouseEvent('click', {
-          bubbles: true, // 事件可以冒泡
-          cancelable: true, // 事件可以取消
-          view: window, // 事件的视图对象
-          clientX: rect.left + randomOffsetX, // 设置随机横坐标
-          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-        });
-
-        // 触发点击事件
-        element.dispatchEvent(clickEvent);
-      })(buyPanel);
       await new Promise(resolve => setTimeout(resolve, 300));
-      ((element: HTMLElement) => {
-        // 获取元素的坐标位置
-        const rect = element.getBoundingClientRect();
+      await window.dispatchMouseEvent(buyPanel);
 
-        // 设置随机偏移范围（例如：-5到+5像素的偏移）
-        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-        // 创建鼠标点击事件，设置自定义的随机坐标
-        const clickEvent = new MouseEvent('click', {
-          bubbles: true, // 事件可以冒泡
-          cancelable: true, // 事件可以取消
-          view: window, // 事件的视图对象
-          clientX: rect.left + randomOffsetX, // 设置随机横坐标
-          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-        });
-
-        // 触发点击事件
-        element.dispatchEvent(clickEvent);
-      })(buyPanel);
       await new Promise(resolve => setTimeout(resolve, 300));
       return { error: '', val: true };
     } catch (error: any) {
@@ -205,36 +262,14 @@ export const setPrice = async (tab: chrome.tabs.Tab, price: string) => {
   await injectDependencies(tab);
   return await callChromeJs(tab, [price], async price => {
     try {
-      const setValue = (selector: string | HTMLInputElement, value: string) => {
+      const setValue = async (selector: string | HTMLInputElement, value: string) => {
         const input = (typeof selector === 'string' ? document.querySelector(selector) : selector) as HTMLInputElement;
         if (!input) throw new Error('input元素不存在');
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-        nativeInputValueSetter.call(input, value);
-        ((element: HTMLElement) => {
-          // 获取元素的坐标位置
-          const rect = element.getBoundingClientRect();
-
-          // 设置随机偏移范围（例如：-5到+5像素的偏移）
-          const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-          const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-          // 创建鼠标点击事件，设置自定义的随机坐标
-          const clickEvent = new MouseEvent('click', {
-            bubbles: true, // 事件可以冒泡
-            cancelable: true, // 事件可以取消
-            view: window, // 事件的视图对象
-            clientX: rect.left + randomOffsetX, // 设置随机横坐标
-            clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-          });
-
-          // 触发点击事件
-          element.dispatchEvent(clickEvent);
-        })(input);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        await window.dispatchMouseEvent(input);
+        await window.humanType(input, value);
       };
       // 卖出价格
-      setValue('input#limitPrice', price);
+      await setValue('input#limitPrice', price);
       await new Promise(resolve => setTimeout(resolve, 16));
       return { error: '', val: true };
     } catch (error: any) {
@@ -247,16 +282,13 @@ export const setRangeValue = async (tab: chrome.tabs.Tab, value: string) => {
   await injectDependencies(tab);
   return await callChromeJs(tab, [value], async value => {
     try {
-      const setValue = (selector: string | HTMLInputElement, value: string) => {
+      const setValue = async (selector: string | HTMLInputElement, value: string) => {
         const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
         if (!input) throw new Error('input元素不存在');
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-        nativeInputValueSetter.call(input, value);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        await window.humanType(input as HTMLInputElement, value);
       };
       // 设置卖出数量
-      setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', value);
+      await setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', value);
       await new Promise(resolve => setTimeout(resolve, 16));
       return { error: '', val: true };
     } catch (error: any) {
@@ -269,16 +301,13 @@ export const setLimitTotal = async (tab: chrome.tabs.Tab, value: string) => {
   await injectDependencies(tab);
   return await callChromeJs(tab, [value], async value => {
     try {
-      const setValue = (selector: string | HTMLInputElement, value: string) => {
+      const setValue = async (selector: string | HTMLInputElement, value: string) => {
         const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
         if (!input) throw new Error('input元素不存在');
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-        nativeInputValueSetter.call(input, value);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        await window.humanType(input as HTMLInputElement, value);
       };
       // 设置卖出数量
-      setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal', value);
+      await setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal', value);
       await new Promise(resolve => setTimeout(resolve, 16));
       return { error: '', val: true };
     } catch (error: any) {
@@ -296,26 +325,8 @@ export const callSubmit = async (tab: chrome.tabs.Tab) =>
         '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] button.bn-button',
       ) as HTMLButtonElement;
       if (!submitBtn) throw new Error('提交按钮不存在, 请确认页面是否正确');
-      ((element: HTMLElement) => {
-        // 获取元素的坐标位置
-        const rect = element.getBoundingClientRect();
+      await window.dispatchMouseEvent(submitBtn);
 
-        // 设置随机偏移范围（例如：-5到+5像素的偏移）
-        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-        // 创建鼠标点击事件，设置自定义的随机坐标
-        const clickEvent = new MouseEvent('click', {
-          bubbles: true, // 事件可以冒泡
-          cancelable: true, // 事件可以取消
-          view: window, // 事件的视图对象
-          clientX: rect.left + randomOffsetX, // 设置随机横坐标
-          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-        });
-
-        // 触发点击事件
-        element.dispatchEvent(clickEvent);
-      })(submitBtn);
       let click = false;
       // 关闭弹窗
       let count = 0;
@@ -333,26 +344,7 @@ export const callSubmit = async (tab: chrome.tabs.Tab) =>
         }
 
         if (btn) {
-          ((element: HTMLElement) => {
-            // 获取元素的坐标位置
-            const rect = element.getBoundingClientRect();
-
-            // 设置随机偏移范围（例如：-5到+5像素的偏移）
-            const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-            const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-            // 创建鼠标点击事件，设置自定义的随机坐标
-            const clickEvent = new MouseEvent('click', {
-              bubbles: true, // 事件可以冒泡
-              cancelable: true, // 事件可以取消
-              view: window, // 事件的视图对象
-              clientX: rect.left + randomOffsetX, // 设置随机横坐标
-              clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-            });
-
-            // 触发点击事件
-            element.dispatchEvent(clickEvent);
-          })(btn);
+          await window.dispatchMouseEvent(btn);
           click = true;
           await new Promise(resolve => setTimeout(resolve, 500));
         }
@@ -373,26 +365,7 @@ export const callBuySubmit = async (tab: chrome.tabs.Tab) =>
       if (!btn) {
         throw new Error('买入按钮不存在, 刷新页面, 请确认页面是否正确');
       }
-      ((element: HTMLElement) => {
-        // 获取元素的坐标位置
-        const rect = element.getBoundingClientRect();
-
-        // 设置随机偏移范围（例如：-5到+5像素的偏移）
-        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-        // 创建鼠标点击事件，设置自定义的随机坐标
-        const clickEvent = new MouseEvent('click', {
-          bubbles: true, // 事件可以冒泡
-          cancelable: true, // 事件可以取消
-          view: window, // 事件的视图对象
-          clientX: rect.left + randomOffsetX, // 设置随机横坐标
-          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-        });
-
-        // 触发点击事件
-        element.dispatchEvent(clickEvent);
-      })(btn);
+      await window.dispatchMouseEvent(btn);
       // 关闭弹窗
       let count = 0;
       // 1000 / 30 每秒30fps 最多等待1秒
@@ -402,26 +375,8 @@ export const callBuySubmit = async (tab: chrome.tabs.Tab) =>
           .querySelector(`div[role='dialog'][class='bn-modal-wrap data-size-small']`)
           ?.querySelector('.bn-button__primary') as HTMLButtonElement;
         if (btn) {
-          ((element: HTMLElement) => {
-            // 获取元素的坐标位置
-            const rect = element.getBoundingClientRect();
+          await window.dispatchMouseEvent(btn);
 
-            // 设置随机偏移范围（例如：-5到+5像素的偏移）
-            const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-            const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-            // 创建鼠标点击事件，设置自定义的随机坐标
-            const clickEvent = new MouseEvent('click', {
-              bubbles: true, // 事件可以冒泡
-              cancelable: true, // 事件可以取消
-              view: window, // 事件的视图对象
-              clientX: rect.left + randomOffsetX, // 设置随机横坐标
-              clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-            });
-
-            // 触发点击事件
-            element.dispatchEvent(clickEvent);
-          })(btn);
           await new Promise(resolve => setTimeout(resolve, 500));
           return { error: '', val: false };
         }
@@ -445,13 +400,9 @@ export const waitOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
         if (orderList.length === 0) break;
         // 如果存在 且超时操作取消 并且返回超时 timeout 单位（s）
         if (Date.now() - start > timeout * 1000) {
-          orderList.forEach(order => {
-            const evt = new MouseEvent('click', {
-              bubbles: true,
-              cancelable: true,
-              view: window,
-            });
-            order.querySelector('td[aria-colindex="10"] svg')?.dispatchEvent(evt);
+          orderList.forEach(async order => {
+            const el = order.querySelector('td[aria-colindex="10"] svg')!;
+            await window.dispatchMouseEvent(el);
           });
           await new Promise(resolve => setTimeout(resolve, 500));
           return { error: '等待订单超时，等待重试', val: true };
@@ -487,47 +438,11 @@ export const getIsSell = async (tab: chrome.tabs.Tab, checkPrice: string) => {
       if (!sellPanel) {
         throw new Error('卖出面板元素不存在, 刷新页面, 请确认页面是否正确');
       }
-      ((element: HTMLElement) => {
-        // 获取元素的坐标位置
-        const rect = element.getBoundingClientRect();
+      await window.dispatchMouseEvent(sellPanel);
 
-        // 设置随机偏移范围（例如：-5到+5像素的偏移）
-        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-        // 创建鼠标点击事件，设置自定义的随机坐标
-        const clickEvent = new MouseEvent('click', {
-          bubbles: true, // 事件可以冒泡
-          cancelable: true, // 事件可以取消
-          view: window, // 事件的视图对象
-          clientX: rect.left + randomOffsetX, // 设置随机横坐标
-          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-        });
-
-        // 触发点击事件
-        element.dispatchEvent(clickEvent);
-      })(sellPanel);
       await new Promise(resolve => setTimeout(resolve, 300));
-      ((element: HTMLElement) => {
-        // 获取元素的坐标位置
-        const rect = element.getBoundingClientRect();
+      await window.dispatchMouseEvent(sellPanel);
 
-        // 设置随机偏移范围（例如：-5到+5像素的偏移）
-        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-        // 创建鼠标点击事件，设置自定义的随机坐标
-        const clickEvent = new MouseEvent('click', {
-          bubbles: true, // 事件可以冒泡
-          cancelable: true, // 事件可以取消
-          view: window, // 事件的视图对象
-          clientX: rect.left + randomOffsetX, // 设置随机横坐标
-          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-        });
-
-        // 触发点击事件
-        element.dispatchEvent(clickEvent);
-      })(sellPanel);
       await new Promise(resolve => setTimeout(resolve, 300));
 
       // const priceEl = document.querySelector(
@@ -535,17 +450,14 @@ export const getIsSell = async (tab: chrome.tabs.Tab, checkPrice: string) => {
       // ) as HTMLSpanElement;
       // if (!priceEl) throw new Error('价格元素不存在, 刷新页面, 请确认页面是否正确');
       // const sellPrice = priceEl.textContent.trim();
-      const setValue = (selector: string | HTMLInputElement, value: string) => {
+      const setValue = async (selector: string | HTMLInputElement, value: string) => {
         const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
         if (!input) throw new Error('input元素不存在');
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-        nativeInputValueSetter.call(input, value);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        await window.humanType(input as HTMLInputElement, value);
       };
-      setValue('input#limitPrice', checkPrice);
+      await setValue('input#limitPrice', checkPrice);
       await new Promise(resolve => setTimeout(resolve, 16));
-      setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
+      await setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
       await new Promise(resolve => setTimeout(resolve, 16));
       const input = document.querySelector(
         '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal',
@@ -594,7 +506,7 @@ export const backSell = async (
       // 判断是否出现验证码
       const isAuth = await isAuthModal(tab);
       // 出现验证弹窗等待
-      if (isAuth) await new Promise(resolve => setTimeout(resolve, 3000));
+      if (isAuth) await new Promise(resolve => setTimeout(resolve, 10000));
       // 等待订单
       await waitOrder(tab, timeout);
       safe = false;
@@ -748,26 +660,7 @@ export const cancelOrder = async (tab: chrome.tabs.Tab) =>
     ) as HTMLButtonElement;
     // 如果不存在则代表未有订单
     if (cancelAll) {
-      ((element: HTMLElement) => {
-        // 获取元素的坐标位置
-        const rect = element.getBoundingClientRect();
-
-        // 设置随机偏移范围（例如：-5到+5像素的偏移）
-        const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-        const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-        // 创建鼠标点击事件，设置自定义的随机坐标
-        const clickEvent = new MouseEvent('click', {
-          bubbles: true, // 事件可以冒泡
-          cancelable: true, // 事件可以取消
-          view: window, // 事件的视图对象
-          clientX: rect.left + randomOffsetX, // 设置随机横坐标
-          clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-        });
-
-        // 触发点击事件
-        element.dispatchEvent(clickEvent);
-      })(cancelAll);
+      await window.dispatchMouseEvent(cancelAll);
 
       await new Promise(resolve => setTimeout(resolve, 300));
       // 确认弹窗
@@ -775,26 +668,7 @@ export const cancelOrder = async (tab: chrome.tabs.Tab) =>
         '.bn-modal-confirm .bn-modal-confirm-actions .bn-button__primary',
       ) as HTMLButtonElement;
       if (btn) {
-        ((element: HTMLElement) => {
-          // 获取元素的坐标位置
-          const rect = element.getBoundingClientRect();
-
-          // 设置随机偏移范围（例如：-5到+5像素的偏移）
-          const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-          const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-          // 创建鼠标点击事件，设置自定义的随机坐标
-          const clickEvent = new MouseEvent('click', {
-            bubbles: true, // 事件可以冒泡
-            cancelable: true, // 事件可以取消
-            view: window, // 事件的视图对象
-            clientX: rect.left + randomOffsetX, // 设置随机横坐标
-            clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-          });
-
-          // 触发点击事件
-          element.dispatchEvent(clickEvent);
-        })(btn);
+        await window.dispatchMouseEvent(btn);
       }
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
@@ -804,13 +678,9 @@ export const cancelOrder = async (tab: chrome.tabs.Tab) =>
     );
     if (orderList.length) {
       // 如果存在 且超时操作取消 并且返回超时 timeout 单位（s）
-      orderList.forEach(order => {
-        const evt = new MouseEvent('click', {
-          bubbles: true,
-          cancelable: true,
-          view: window,
-        });
-        order.querySelector('td[aria-colindex="10"] svg')?.dispatchEvent(evt);
+      orderList.forEach(async order => {
+        const btn = order.querySelector('td[aria-colindex="10"] svg')!;
+        await window.dispatchMouseEvent(btn);
       });
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
@@ -819,7 +689,7 @@ export const cancelOrder = async (tab: chrome.tabs.Tab) =>
   });
 
 export const closeReverseOrder = async (tab: chrome.tabs.Tab) =>
-  await callChromeJs(tab, [], () => {
+  await callChromeJs(tab, [], async () => {
     try {
       // 反向订单校验
       const btn = document.querySelector(
@@ -829,26 +699,7 @@ export const closeReverseOrder = async (tab: chrome.tabs.Tab) =>
         const isChecked = btn.getAttribute('aria-checked') === 'true';
         // 点击反向按钮
         if (isChecked) {
-          ((element: HTMLElement) => {
-            // 获取元素的坐标位置
-            const rect = element.getBoundingClientRect();
-
-            // 设置随机偏移范围（例如：-5到+5像素的偏移）
-            const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-            const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-            // 创建鼠标点击事件，设置自定义的随机坐标
-            const clickEvent = new MouseEvent('click', {
-              bubbles: true, // 事件可以冒泡
-              cancelable: true, // 事件可以取消
-              view: window, // 事件的视图对象
-              clientX: rect.left + randomOffsetX, // 设置随机横坐标
-              clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-            });
-
-            // 触发点击事件
-            element.dispatchEvent(clickEvent);
-          })(btn);
+          await window.dispatchMouseEvent(btn);
         }
       }
       return { error: '', val: true };
@@ -858,7 +709,7 @@ export const closeReverseOrder = async (tab: chrome.tabs.Tab) =>
   });
 
 export const openReverseOrder = async (tab: chrome.tabs.Tab) =>
-  await callChromeJs(tab, [], () => {
+  await callChromeJs(tab, [], async () => {
     try {
       // 反向订单校验
       const btn = document.querySelector(
@@ -868,26 +719,7 @@ export const openReverseOrder = async (tab: chrome.tabs.Tab) =>
         const isChecked = btn.getAttribute('aria-checked') === 'true';
         // 点击反向按钮
         if (!isChecked) {
-          ((element: HTMLElement) => {
-            // 获取元素的坐标位置
-            const rect = element.getBoundingClientRect();
-
-            // 设置随机偏移范围（例如：-5到+5像素的偏移）
-            const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-            const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-            // 创建鼠标点击事件，设置自定义的随机坐标
-            const clickEvent = new MouseEvent('click', {
-              bubbles: true, // 事件可以冒泡
-              cancelable: true, // 事件可以取消
-              view: window, // 事件的视图对象
-              clientX: rect.left + randomOffsetX, // 设置随机横坐标
-              clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-            });
-
-            // 触发点击事件
-            element.dispatchEvent(clickEvent);
-          })(btn);
+          await window.dispatchMouseEvent(btn);
         }
       }
       return { error: '', val: true };
@@ -902,16 +734,13 @@ export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) => {
       const limitTotals = document.querySelectorAll('input#limitTotal');
       if (!limitTotals.length || limitTotals.length < 2) throw new Error('反向价格元素不存在, 请确认页面是否正确');
       const limitTotal = limitTotals[1] as any;
-      const setValue = (selector: string | HTMLInputElement, value: string) => {
+      const setValue = async (selector: string | HTMLInputElement, value: string) => {
         const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
         if (!input) throw new Error('input元素不存在');
-        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-        nativeInputValueSetter.call(input, value);
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
+        await window.humanType(input as HTMLInputElement, value);
       };
       // 卖出价格
-      setValue(limitTotal, price);
+      await setValue(limitTotal, price);
       await new Promise(resolve => setTimeout(resolve, 16));
       return { error: '', val: true };
     } catch (error: any) {
@@ -933,13 +762,9 @@ export const waitBuyOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
         if (orderList.length === 0) break;
         // 如果存在 且超时操作取消 并且返回超时 timeout 单位（s）
         if (Date.now() - start > timeout * 1000) {
-          orderList.forEach(order => {
-            const evt = new MouseEvent('click', {
-              bubbles: true,
-              cancelable: true,
-              view: window,
-            });
-            order.parentNode?.parentNode?.querySelector('svg')?.dispatchEvent(evt);
+          orderList.forEach(async order => {
+            const btn = order.parentNode!.parentNode!.querySelector('svg')!;
+            await window.dispatchMouseEvent(btn);
           });
           console.log('等待订单超时，等待重试');
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -966,13 +791,9 @@ export const waitSellOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =
         if (orderList.length === 0) break;
         // 如果存在 且超时操作取消 并且返回超时 timeout 单位（s）
         if (Date.now() - start > timeout * 1000) {
-          orderList.forEach(order => {
-            const evt = new MouseEvent('click', {
-              bubbles: true,
-              cancelable: true,
-              view: window,
-            });
-            order.parentNode?.parentNode?.querySelector('svg')?.dispatchEvent(evt);
+          orderList.forEach(async order => {
+            const btn = order.parentNode!.parentNode!.querySelector('svg')!;
+            await window.dispatchMouseEvent(btn);
           });
           console.log('等待订单超时，等待重试');
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -1024,6 +845,7 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
   const [{ result }] = isModal;
   if (result) {
     if (!secret) throw new Error('出现验证码，但是未设置，自动停止');
+    await new Promise(resolve => setTimeout(resolve, 3000));
     const code = getCode(secret);
     if (!code) throw new Error('出现验证码，但获取验证码失败，自动停止');
     const results = await chrome.scripting.executeScript({
@@ -1041,53 +863,14 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
               const btn = root.querySelector('.bidscls-btnLink2') as HTMLButtonElement;
               if (btn) {
                 // 跳转二次验证
-
-                ((element: HTMLElement) => {
-                  // 获取元素的坐标位置
-                  const rect = element.getBoundingClientRect();
-
-                  // 设置随机偏移范围（例如：-5到+5像素的偏移）
-                  const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-                  const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-                  // 创建鼠标点击事件，设置自定义的随机坐标
-                  const clickEvent = new MouseEvent('click', {
-                    bubbles: true, // 事件可以冒泡
-                    cancelable: true, // 事件可以取消
-                    view: window, // 事件的视图对象
-                    clientX: rect.left + randomOffsetX, // 设置随机横坐标
-                    clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-                  });
-
-                  // 触发点击事件
-                  element.dispatchEvent(clickEvent);
-                })(btn);
+                await window.dispatchMouseEvent(btn);
               }
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
             const steps = root.querySelectorAll('.bn-mfa-overview-step-title');
             const sfzapp = Array.from(steps).find(c => c.innerHTML.includes('身份验证')) as HTMLButtonElement;
             if (sfzapp) {
-              ((element: HTMLElement) => {
-                // 获取元素的坐标位置
-                const rect = element.getBoundingClientRect();
-
-                // 设置随机偏移范围（例如：-5到+5像素的偏移）
-                const randomOffsetX = Math.random() * 20 - 5; // 横向偏移量，范围是 -5 到 +5
-                const randomOffsetY = Math.random() * 20 - 5; // 纵向偏移量，范围是 -5 到 +5
-
-                // 创建鼠标点击事件，设置自定义的随机坐标
-                const clickEvent = new MouseEvent('click', {
-                  bubbles: true, // 事件可以冒泡
-                  cancelable: true, // 事件可以取消
-                  view: window, // 事件的视图对象
-                  clientX: rect.left + randomOffsetX, // 设置随机横坐标
-                  clientY: rect.top + randomOffsetY, // 设置随机纵坐标
-                });
-
-                // 触发点击事件
-                element.dispatchEvent(clickEvent);
-              })(sfzapp);
+              await window.dispatchMouseEvent(sfzapp);
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
             // 判断是否是身份验证器
@@ -1097,15 +880,8 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
               const input = root.querySelector('.bn-textField-input') as any;
               const value = code;
 
-              const nativeInputValueSetter = (Object as any).getOwnPropertyDescriptor(
-                window.HTMLInputElement.prototype,
-                'value',
-              ).set;
+              await window.humanType(input, value);
 
-              nativeInputValueSetter.call(input, value);
-
-              input.dispatchEvent(new Event('input', { bubbles: true }));
-              input.dispatchEvent(new Event('change', { bubbles: true }));
               await new Promise(resolve => setTimeout(resolve, 5000));
               const dialog = document.querySelector('#mfa-shadow-host');
               if (dialog) {
@@ -1127,3 +903,25 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
   }
   return false;
 };
+
+// 启动随机模拟
+export const startRandom = async (tab: chrome.tabs.Tab) =>
+  await callChromeJs(tab, [], async () => {
+    try {
+      window.startIdle();
+      return { error: '', val: true };
+    } catch (error: any) {
+      return { error: error.message, val: false };
+    }
+  });
+
+// 停止随机模拟
+export const stopRandom = async (tab: chrome.tabs.Tab) =>
+  await callChromeJs(tab, [], async () => {
+    try {
+      window.stopIdle();
+      return { error: '', val: true };
+    } catch (error: any) {
+      return { error: error.message, val: false };
+    }
+  });

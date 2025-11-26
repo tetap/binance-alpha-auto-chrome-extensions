@@ -15,6 +15,8 @@ import {
   setLimitTotal,
   setPrice,
   waitOrder,
+  startRandom,
+  stopRandom,
 } from '../tool/tool_v1';
 import { useStorage } from '@extension/shared';
 import {
@@ -189,6 +191,8 @@ export const OrderMode = ({
       setStartBalance(balance);
     }
     let index = 0;
+    await injectDependencies(tab);
+    await startRandom(tab);
     for (let i = 0; i < runNum; i++) {
       let sleepTime = Math.floor(Math.random() * (maxSleep - minSleep + 1) + minSleep) * 1000;
       appendLog(`当前轮次: ${i + 1}`, 'info');
@@ -278,7 +282,7 @@ export const OrderMode = ({
         // 出现验证弹窗等待
         if (isAuth) {
           appendLog('出现验证码等待过验证', 'info');
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await new Promise(resolve => setTimeout(resolve, 10000));
         }
         // 等待订单完成
         BuyOk = await waitOrder(tab, timeout);
@@ -336,6 +340,8 @@ export const OrderMode = ({
     balance = await getBalance(tab);
 
     if (!balance) throw new Error('获取余额失败');
+
+    await stopRandom(tab);
 
     appendLog(`刷新余额: ${balance}`, 'info');
 
