@@ -834,6 +834,7 @@ export const getCode = (secret: string) => (window as any).otplib.authenticator.
 export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
   const isModal = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
+    world: 'MAIN',
     func: () => {
       const dialog = document.querySelector('#mfa-shadow-host');
       if (dialog) {
@@ -851,6 +852,7 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id! },
       args: [code],
+      world: 'MAIN',
       func: async (code: string) => {
         try {
           const dialog = document.querySelector('#mfa-shadow-host');
