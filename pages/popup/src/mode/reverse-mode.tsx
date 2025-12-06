@@ -65,6 +65,7 @@ export const ReverseMode = ({
       maxSleep: string;
       minDiscount: string;
       maxDiscount: string;
+      priceRatio: string;
     };
 
     if (!data.timeout || !data.count || !data.minDiscount || !data.maxDiscount) {
@@ -109,6 +110,8 @@ export const ReverseMode = ({
 
     data['minSleep'] = setting['minSleep'] || '1';
     data['maxSleep'] = setting['maxSleep'] || '5';
+
+    data['priceRatio'] = setting['priceRatio'] || '0.5';
 
     if (Number(data['maxSleep']) <= Number(data['minSleep'])) {
       throw new Error('最大延迟时间不能小于最小延迟时间');
@@ -268,8 +271,15 @@ export const ReverseMode = ({
         //     ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString()
         //     : (Number(buyPrice) + Number(buyPrice) * 0.00001).toString(); // 调整买入价
 
-        const submitPrice =
-          stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice;
+        // const submitPrice =
+        //   stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice;
+
+        // 溢价率 %
+        const priceRatio = Number(options.priceRatio);
+        // 计算小数点数量
+        const pricePrecision = buyPrice.toString().split('.')[1].length;
+        // 调整买入价
+        const submitPrice = floor(Number(buyPrice) * (1 + priceRatio * 0.01), pricePrecision).toString();
 
         // 操作写入买入价格
         await setPrice(tab, submitPrice);

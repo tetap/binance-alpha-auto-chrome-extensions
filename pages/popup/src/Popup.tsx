@@ -321,6 +321,27 @@ const Popup = () => {
             </div>
           </div>
 
+          <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
+            <Label htmlFor="priceRatio" className="w-28 flex-none">
+              溢价率(%)
+            </Label>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Input
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                disabled={runing}
+                spellCheck={false}
+                type="text"
+                name="priceRatio"
+                id="priceRatio"
+                placeholder={`最小时间(s)`}
+                defaultValue={setting.priceRatio ?? '0.5'}
+                onChange={e => settingStorage.setVal({ priceRatio: e.target.value ?? '' })}
+              />
+            </div>
+          </div>
+
           <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-4 flex w-full flex-col">
             <div className="justify-beween flex items-center gap-4">
               <CollapsibleTrigger asChild>

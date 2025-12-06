@@ -34,6 +34,8 @@ export type SettingState = {
 
   minDiscount: string;
   maxDiscount: string;
+  // 溢价率
+  priceRatio: string;
 };
 
 // eslint-disable-next-line import-x/exports-last
@@ -64,6 +66,8 @@ const storage = createStorage<SettingState>(
 
     minDiscount: '0.2',
     maxDiscount: '0.5',
+
+    priceRatio: '0.5',
   },
   {
     storageEnum: StorageEnum.Local,
