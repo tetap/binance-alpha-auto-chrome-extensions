@@ -42,7 +42,7 @@ export const injectDependencies = async (tab: chrome.tabs.Tab) => {
         };
       };
 
-      window.humanType = async (input: HTMLInputElement, text: string, minDelay = 30, maxDelay = 80) => {
+      window.humanType = async (input: HTMLInputElement, text: string, minDelay = 10, maxDelay = 30) => {
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
 
         input.focus();
